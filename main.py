@@ -40,7 +40,6 @@ class Main_UI(QMainWindow, main_form_class):
         self.pushButton2.clicked.connect(self.time_attack_Function)
         self.pushButton3.clicked.connect(self.playFunction)
         self.pushButton4.clicked.connect(self.exiteFunction)
-       
 
     def makeFunction(self):
         self.close()
@@ -65,14 +64,35 @@ class Make_UI(QMainWindow, second_1_1_form_class):
         super().__init__()
         self.setupUi(self)
         self.backButton.clicked.connect(self.backFunction)
-        self.selectbutton.clicked.connect(self.Function)
-        self.select_pan = QTextEdit(self)
-        self.select_pan.setText("원하는 판의 크기를 입력하시오")
+        self.pan2x2.clicked.connect(self.twoFunction)
+        self.pan3x3.clicked.connect(self.threeFunction)
+        self.pan4x4.clicked.connect(self.fourFunction)
+        self.pan5x5.clicked.connect(self.fiveFunction)
 
-    def Function(self) :
-        pan = select_pan.toPlainText()
-        make_grid_instance = Make_grid()  
-        make_grid_instance.set_size(pan)  
+    def twoFunction(self) :
+        make_grid_instance = Make_grid()  # Make_grid 클래스의 인스턴스 생성
+        make_grid_instance.set_size(2)  # set_size 메서드 호출
+        self.close()
+        self.new_window = make_grid_instance
+        self.new_window.show()
+
+    def threeFunction(self) :
+        make_grid_instance = Make_grid()  # Make_grid 클래스의 인스턴스 생성
+        make_grid_instance.set_size(3)  # set_size 메서드 호출
+        self.close()
+        self.new_window = make_grid_instance
+        self.new_window.show()
+
+    def fourFunction(self) :
+        make_grid_instance = Make_grid()  # Make_grid 클래스의 인스턴스 생성
+        make_grid_instance.set_size(4)  # set_size 메서드 호출
+        self.close()
+        self.new_window = make_grid_instance
+        self.new_window.show()
+
+    def fiveFunction(self) :
+        make_grid_instance = Make_grid()  # Make_grid 클래스의 인스턴스 생성
+        make_grid_instance.set_size(5)  # set_size 메서드 호출
         self.close()
         self.new_window = make_grid_instance
         self.new_window.show()
@@ -244,6 +264,36 @@ class Time_UI(QMainWindow, second_2_1_form_class):
         super().__init__()
         self.setupUi(self)
         self.backButton.clicked.connect(self.backFunction)
+        self.time_attack() # 생성자에서 time_attack 메서드 호출
+
+    def time_attack(self):
+        file_count = count_puzzle_files()
+
+        layout = QGridLayout()  # 버튼을 배치할 그리드 레이아웃 생성
+
+        # 버튼을 2개씩 생성하여 배치
+        for i in range(file_count):
+            row = i // 2  # 행 계산 (나누기 2)
+            col = (i % 2) * 2  # 열 계산 (0 또는 2)
+            
+            button1 = QPushButton(f"Puzzle {2*i + 1}", self)
+            button1.clicked.connect(lambda _, x=2*i: self.puzzle_button_clicked(x))
+            layout.addWidget(button1, row, col)  # 첫 번째 버튼 추가
+
+            # 다음 열에 두 번째 버튼 추가
+            button2 = QPushButton(f"Puzzle {2*i + 2}", self)
+            button2.clicked.connect(lambda _, x=2*i + 1: self.puzzle_button_clicked(x))
+            layout.addWidget(button2, row, col + 1)
+
+        # 기존 레이아웃 제거 및 새로운 레이아웃 설정
+        if self.scrollAreaWidgetContents.layout():
+            QWidget().setLayout(self.scrollAreaWidgetContents.layout())
+        self.scrollAreaWidgetContents.setLayout(layout)
+
+    def puzzle_button_clicked(self, index):
+       
+        print(f"Puzzle Button {index + 1} clicked.") # 버튼 클릭 이벤트 핸들러 구현
+
 
     def backFunction(self) :
         self.close()
@@ -255,11 +305,90 @@ class Stage_UI(QMainWindow, second_3_1_form_class):
         super().__init__()
         self.setupUi(self)
         self.backButton.clicked.connect(self.backFunction)
+        self.stage_button()
 
-    def backFunction(self) :
+    def stage_button(self):
+
+        file_count = count_puzzle_files()
+
+        layout = QGridLayout()  # 버튼을 배치할 그리드 레이아웃 생성
+
+        for i in range(file_count):
+            row = i // 3  # 행 계산
+            col = i % 3   # 열 계산
+            button = QPushButton(f"Puzzle {i + 1}", self)
+            button.clicked.connect(lambda _, x=i: self.puzzle_button_clicked(x))
+            layout.addWidget(button, row, col)  # 그리드 레이아웃에 버튼 추가
+
+        # 기존 레이아웃 제거 및 새로운 레이아웃 설정
+        if self.scrollAreaWidgetContents.layout():
+            QWidget().setLayout(self.scrollAreaWidgetContents.layout())
+        self.scrollAreaWidgetContents.setLayout(layout)
+
+    def puzzle_button_clicked(self, index):
+        # 퍼즐 파일 목록을 가져옴
+        puzzle_files = index_puzzle_files()
+        
+        # 인덱스가 퍼즐 파일 개수 이내에 있는지 확인
+        if 0 <= index < len(puzzle_files):
+            selected_puzzle_file = puzzle_files[index]  # 선택된 퍼즐 파일
+            puzzle_directory = os.path.join(path, "puzzle")  # 퍼즐 파일이 위치한 디렉토리
+
+            # 선택된 퍼즐 파일 경로
+            selected_puzzle_path = os.path.join(puzzle_directory, selected_puzzle_file)
+
+            # 선택된 퍼즐 파일을 불러오는 함수 호출 (예시로 print 함수를 사용)
+            print("Selected puzzle file:", selected_puzzle_path)
+        else:
+            print("Invalid puzzle index")
+
+    def backFunction(self):
         self.close()
         self.new_window = Main_UI()
         self.new_window.show()
+
+
+def load_puzzle () :
+    pass
+
+def count_puzzle_files(): # 퍼즐 파일 개수 세는 함수
+        
+        puzzle_directory = os.path.join(path, "puzzle")
+        if not os.path.exists(puzzle_directory):
+            return 0
+
+        # puzzle 디렉토리 내의 파일 목록을 가져와서 ".txt" 확장자를 가진 파일 개수를 셈
+        puzzle_files = [f for f in os.listdir(puzzle_directory) if f.endswith(".txt")]
+        return len(puzzle_files)
+
+def index_puzzle_files() :
+
+    puzzle_dir = os.path.join(path, "puzzle")
+
+    # puzzle_dir 디렉토리에 있는 파일과 디렉토리 목록을 가져옵니다.
+    puzzle_files = os.listdir(puzzle_dir)
+
+    # 파일 목록(files) 중에서 확장자가 '.txt'인 파일들만 필터링하여 txt_file 리스트에 저장합니다.
+    puzzle_txt_file = [f for f in puzzle_files if f.endswith('.txt')]
+
+    # txt_file 리스트에 있는 파일들을 수정된 시간을 기준으로 내림차순으로 정렬합니다.
+    # 정렬 기준은 파일의 수정 시간(os.path.getmtime)을 사용합니다.
+    # reverse=True 옵션을 통해 내림차순으로 정렬합니다.
+    puzzle_txt_file.sort(key=lambda x: os.path.getmtime(os.path.join(puzzle_dir, x)), reverse=True)
+
+    # 정렬된 파일 리스트를 반환합니다.
+    return puzzle_txt_file
+
+def index_time_files() :
+
+    time_dir = os.path.join(path, "time")
+
+    time_files = os.listdir(time_dir)
+
+    time_txt_file = [f for f in time_files if f.endswith('.txt')]
+    time_txt_file.sort(key=lambda x: os.path.getmtime(os.path.join(time_dir, x)), reverse=True)
+
+    return time_txt_file
 
 if __name__ == "__main__":
     # QApplication : 프로그램을 실행시켜주는 클래스
