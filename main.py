@@ -64,35 +64,12 @@ class Make_UI(QMainWindow, second_1_1_form_class):
         super().__init__()
         self.setupUi(self)
         self.backButton.clicked.connect(self.backFunction)
-        self.pan2x2.clicked.connect(self.twoFunction)
-        self.pan3x3.clicked.connect(self.threeFunction)
-        self.pan4x4.clicked.connect(self.fourFunction)
-        self.pan5x5.clicked.connect(self.fiveFunction)
+        self.selectbutton.clicked.connect(self.Function)
 
-    def twoFunction(self) :
+    def Function(self) :
+        text = self.select_pan.toPlainText()
         make_grid_instance = Make_grid()  # Make_grid 클래스의 인스턴스 생성
-        make_grid_instance.set_size(2)  # set_size 메서드 호출
-        self.close()
-        self.new_window = make_grid_instance
-        self.new_window.show()
-
-    def threeFunction(self) :
-        make_grid_instance = Make_grid()  # Make_grid 클래스의 인스턴스 생성
-        make_grid_instance.set_size(3)  # set_size 메서드 호출
-        self.close()
-        self.new_window = make_grid_instance
-        self.new_window.show()
-
-    def fourFunction(self) :
-        make_grid_instance = Make_grid()  # Make_grid 클래스의 인스턴스 생성
-        make_grid_instance.set_size(4)  # set_size 메서드 호출
-        self.close()
-        self.new_window = make_grid_instance
-        self.new_window.show()
-
-    def fiveFunction(self) :
-        make_grid_instance = Make_grid()  # Make_grid 클래스의 인스턴스 생성
-        make_grid_instance.set_size(5)  # set_size 메서드 호출
+        make_grid_instance.set_size(int(text))  # set_size 메서드 호출
         self.close()
         self.new_window = make_grid_instance
         self.new_window.show()
@@ -253,6 +230,9 @@ class Make_grid(QMainWindow, second_1_2_form_class):
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(puzzle_data, f, ensure_ascii=False, indent=4)
         open(time_path, 'w').close()
+        self.close()
+        self.new_window = Main_UI()
+        self.new_window.show()
 
     def backFunction(self) :
         self.close()
@@ -276,12 +256,12 @@ class Time_UI(QMainWindow, second_2_1_form_class):
             row = i // 2  # 행 계산 (나누기 2)
             col = (i % 2) * 2  # 열 계산 (0 또는 2)
             
-            button1 = QPushButton(f"Puzzle {2*i + 1}", self)
+            button1 = QPushButton(f"Puzzle {i+1}", self)
             button1.clicked.connect(lambda _, x=2*i: self.puzzle_button_clicked(x))
             layout.addWidget(button1, row, col)  # 첫 번째 버튼 추가
 
             # 다음 열에 두 번째 버튼 추가
-            button2 = QPushButton(f"Puzzle {2*i + 2}", self)
+            button2 = QPushButton(f"Puzzle {i+1}Rakning", self)
             button2.clicked.connect(lambda _, x=2*i + 1: self.puzzle_button_clicked(x))
             layout.addWidget(button2, row, col + 1)
 
@@ -339,8 +319,11 @@ class Stage_UI(QMainWindow, second_3_1_form_class):
 
             # 선택된 퍼즐 파일을 불러오는 함수 호출 (예시로 print 함수를 사용)
             print("Selected puzzle file:", selected_puzzle_path)
+            
         else:
             print("Invalid puzzle index")
+            
+
 
     def backFunction(self):
         self.close()
@@ -348,8 +331,10 @@ class Stage_UI(QMainWindow, second_3_1_form_class):
         self.new_window.show()
 
 
-def load_puzzle () :
-    pass
+
+        
+def load_puzzle (selected_puzzle_path) :
+    pass   
 
 def count_puzzle_files(): # 퍼즐 파일 개수 세는 함수
         
@@ -389,6 +374,11 @@ def index_time_files() :
     time_txt_file.sort(key=lambda x: os.path.getmtime(os.path.join(time_dir, x)), reverse=True)
 
     return time_txt_file
+
+class make_stage(QMainWindow, second_3_1_form_class):
+    print(1)
+
+
 
 if __name__ == "__main__":
     # QApplication : 프로그램을 실행시켜주는 클래스
