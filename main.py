@@ -256,12 +256,12 @@ class Time_UI(QMainWindow, second_2_1_form_class):
             row = i // 2  # 행 계산 (나누기 2)
             col = (i % 2) * 2  # 열 계산 (0 또는 2)
             
-            button1 = QPushButton(f"Puzzle {i+1}", self)
+            button1 = QPushButton(f"Puzzle{i+1}", self)
             button1.clicked.connect(lambda _, x=2*i: self.puzzle_button_clicked(x))
             layout.addWidget(button1, row, col)  # 첫 번째 버튼 추가
 
             # 다음 열에 두 번째 버튼 추가
-            button2 = QPushButton(f"Puzzle {i+1}Rakning", self)
+            button2 = QPushButton(f"Puzzle{i+1} Rakning", self)
             button2.clicked.connect(lambda _, x=2*i + 1: self.puzzle_button_clicked(x))
             layout.addWidget(button2, row, col + 1)
 
@@ -271,14 +271,156 @@ class Time_UI(QMainWindow, second_2_1_form_class):
         self.scrollAreaWidgetContents.setLayout(layout)
 
     def puzzle_button_clicked(self, index):
-       
-        print(f"Puzzle Button {index + 1} clicked.") # 버튼 클릭 이벤트 핸들러 구현
+        puzzle_files = index_puzzle_files()  # 퍼즐 파일 목록을 불러옵니다.
+        puzzle_directory = os.path.join(path, "puzzle")
+        print(f"Puzzle Button {index + 1} clicked.")  # 버튼 클릭 이벤트 핸들러 구현
+        if (index + 1) % 2:
+            selected_puzzle_file = puzzle_files[index]  # 선택된 퍼즐 파일
+        else:
+            selected_puzzle_file = puzzle_files[index + 1]  # 선택된 퍼즐 파일 (짝수 버튼)
+        selected_puzzle_path = os.path.join(puzzle_directory, selected_puzzle_file)
+        print("Selected puzzle file:", selected_puzzle_path)
+        self.new_window = make_Time(selected_puzzle_path, selected_puzzle_file)  # selected_puzzle_file을 전달합니다.
+        self.new_window.show()
+
 
 
     def backFunction(self) :
         self.close()
         self.new_window = Main_UI()
         self.new_window.show()
+
+class make_Time(QMainWindow, second_2_2_form_class):
+    def __init__(self, selected_puzzle_path, selected_puzzle_file):
+        super().__init__()
+        self.setupUi(self)
+        self.backButton.clicked.connect(self.backFunction)
+        self.life = 3
+        self.load_puzzle(selected_puzzle_path)
+        self.selected_puzzle_file = selected_puzzle_file 
+    
+    def load_puzzle(self, selected_puzzle_path):
+        with open(selected_puzzle_path, 'r') as file:
+            self.current_puzzle = json.load(file)
+        self.life = 3
+        self.update_life()
+        self.game_grid = self.current_puzzle['grid']
+        size = len(self.game_grid)
+        self.game_buttons = []
+        self.real_time = 60  # 5분 타이머 초기화
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_time)
+        self.timer.start(1000) 
+
+        for i in reversed(range(self.logic_pan.count())):  # 퍼즐 그리드 초기화
+            widget = self.logic_pan.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+
+        self.display_hints(size)
+        self.create_puzzle_grid(size)
+
+    def display_hints(self, size):
+        row_hints = self.generate_hints(self.game_grid)
+        col_hints = self.generate_hints(zip(*self.game_grid))  # Transpose for column hints
+
+        for i in range(size):
+            hint_label = QLabel(' '.join(map(str, row_hints[i])))
+            self.logic_pan.addWidget(hint_label, i + 1, 0)
+
+        for j in range(size):
+            hint_label = QLabel(' '.join(map(str, col_hints[j])))
+            self.logic_pan.addWidget(hint_label, 0, j + 1)
+
+    def generate_hints(self, lines):
+        hints = []
+        for line in lines:
+            hint = []
+            count = 0
+            for cell in line:
+                if cell == 1:
+                    count += 1
+                elif count > 0:
+                    hint.append(count)
+                    count = 0
+            if count > 0:
+                hint.append(count)
+            hints.append(hint or [0])
+        return hints
+
+    def create_puzzle_grid(self, size):
+        for i in range(size):
+            row_buttons = []
+            for j in range(size):
+                button = QPushButton()
+                button.setCheckable(True)
+                button.clicked.connect(self.create_button_handler(i, j))
+                button_size = min(800 // size, 800 // size)  # 퍼즐 크기에 따라 버튼 크기 조정
+                button.setFixedSize(button_size, button_size)
+                self.logic_pan.addWidget(button, i + 1, j + 1)
+                row_buttons.append(button)
+            self.game_buttons.append(row_buttons)
+
+    def create_button_handler(self, x, y):
+        def handler():
+            self.check_answer(x, y)
+        return handler
+    
+    def update_time(self):
+        self.real_time -= 1  # real_time 값을 1씩 감소시킵니다.
+        minutes, seconds = divmod(self.real_time, 60)
+        time_text = f"{minutes:02d}:{seconds:02d}"
+        self.time.setText(f"time: {time_text}")
+        if self.real_time <= 0:
+            self.timer.stop()
+            QMessageBox.information(self, "시간종료")
+            self.close()
+            self.new_window = Time_UI()
+            self.new_window.show()
+
+
+
+
+    def check_answer(self, x, y):
+        if self.game_grid[x][y] == 1:
+            self.game_buttons[x][y].setStyleSheet('background-color: black')
+        else:
+            self.life -= 1
+            self.update_life()
+            if self.life == 0:
+                self.fail()
+            return
+
+        if check_clear(self.game_grid, self.game_buttons):
+            QMessageBox.information(self, "Clear!", "정답입니다")
+            self.close()
+            self.new_window = Time_UI()
+            self.new_window.show()
+
+    
+
+    def update_life(self):
+        self.heart.setText(f"life: {self.life}")
+
+    def fail(self):
+        QMessageBox.information(self, "Game Over", "체력이 없습니다.")
+        self.close()
+        self.new_window = Time_UI()
+        self.new_window.show()
+
+    def backFunction(self):
+        self.close()
+        self.new_window = Main_UI()
+        self.new_window.show()
+
+    
+    def time_save_file(self, index):
+        # path 현재 파일 경로
+        time_path = os.path.join(path, "time")
+        selected_time_path = os.path.join(time_path, self.selected_puzzle_file)  # 인스턴스 변수를 사용합니다.
+        time_data = {"real_time": self.real_time}
+        with open(selected_time_path, "w") as file:
+            json.dump(time_data, file)
     
 class Stage_UI(QMainWindow, second_3_1_form_class):
     def __init__(self):
@@ -319,6 +461,8 @@ class Stage_UI(QMainWindow, second_3_1_form_class):
 
             # 선택된 퍼즐 파일을 불러오는 함수 호출 (예시로 print 함수를 사용)
             print("Selected puzzle file:", selected_puzzle_path)
+            self.new_window = make_stage(selected_puzzle_path)
+            self.new_window.show()
             
         else:
             print("Invalid puzzle index")
@@ -329,12 +473,117 @@ class Stage_UI(QMainWindow, second_3_1_form_class):
         self.close()
         self.new_window = Main_UI()
         self.new_window.show()
+#네모로직 채점 부분
+class make_stage(QMainWindow, second_3_2_form_class):
+    def __init__(self, selected_puzzle_path):
+        super().__init__()
+        self.setupUi(self)
+        self.backButton.clicked.connect(self.backFunction)
+        self.life = 3
+        self.load_puzzle(selected_puzzle_path)
+
+    def load_puzzle(self, selected_puzzle_path):
+        with open(selected_puzzle_path, 'r') as file:
+            self.current_puzzle = json.load(file)
+        self.life = 3
+        self.update_life()
+        self.game_grid = self.current_puzzle['grid']
+        size = len(self.game_grid)
+        self.game_buttons = []
+
+        for i in reversed(range(self.logic_pan.count())):  # 퍼즐 그리드 초기화
+            widget = self.logic_pan.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+
+        self.display_hints(size)
+        self.create_puzzle_grid(size)
+
+    def display_hints(self, size):
+        row_hints = self.generate_hints(self.game_grid)
+        col_hints = self.generate_hints(zip(*self.game_grid))  # Transpose for column hints
+
+        for i in range(size):
+            hint_label = QLabel(' '.join(map(str, row_hints[i])))
+            self.logic_pan.addWidget(hint_label, i + 1, 0)
+
+        for j in range(size):
+            hint_label = QLabel(' '.join(map(str, col_hints[j])))
+            self.logic_pan.addWidget(hint_label, 0, j + 1)
+
+    def generate_hints(self, lines):
+        hints = []
+        for line in lines:
+            hint = []
+            count = 0
+            for cell in line:
+                if cell == 1:
+                    count += 1
+                elif count > 0:
+                    hint.append(count)
+                    count = 0
+            if count > 0:
+                hint.append(count)
+            hints.append(hint or [0])
+        return hints
+
+    def create_puzzle_grid(self, size):
+        for i in range(size):
+            row_buttons = []
+            for j in range(size):
+                button = QPushButton()
+                button.setCheckable(True)
+                button.clicked.connect(self.create_button_handler(i, j))
+                button_size = min(800 // size, 800 // size)  # 퍼즐 크기에 따라 버튼 크기 조정
+                button.setFixedSize(button_size, button_size)
+                self.logic_pan.addWidget(button, i + 1, j + 1)
+                row_buttons.append(button)
+            self.game_buttons.append(row_buttons)
+
+    def create_button_handler(self, x, y):
+        def handler():
+            self.check_answer(x, y)
+        return handler
+
+    def check_answer(self, x, y):
+        if self.game_grid[x][y] == 1:
+            self.game_buttons[x][y].setStyleSheet('background-color: black')
+        else:
+            self.life -= 1
+            self.update_life()
+            if self.life == 0:
+                self.fail()
+            return
+
+        if check_clear(self.game_grid, self.game_buttons):
+            QMessageBox.information(self, "Clear!", "정답입니다")
+            self.close()
+            self.new_window = Stage_UI()
+            self.new_window.show()
 
 
+    def update_life(self):
+        self.heart.setText(f"life: {self.life}")
+
+    def fail(self):
+        QMessageBox.information(self, "Game Over", "체력이 없습니다.")
+        self.close()
+        self.new_window = Stage_UI()
+        self.new_window.show()
+
+    def backFunction(self):
+        self.close()
+        self.new_window = Main_UI()
+        self.new_window.show()
 
         
-def load_puzzle (selected_puzzle_path) :
-    pass   
+
+def check_clear(game_grid, game_buttons):
+    for i in range(len(game_grid)):
+        for j in range(len(game_grid[i])):
+            if game_grid[i][j] == 1 and not game_buttons[i][j].isChecked():
+                return False
+    return True
 
 def count_puzzle_files(): # 퍼즐 파일 개수 세는 함수
         
@@ -375,8 +624,7 @@ def index_time_files() :
 
     return time_txt_file
 
-class make_stage(QMainWindow, second_3_1_form_class):
-    print(1)
+
 
 
 
