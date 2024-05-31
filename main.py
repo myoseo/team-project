@@ -273,15 +273,37 @@ class Time_UI(QMainWindow, second_2_1_form_class):
     def puzzle_button_clicked(self, index):
         puzzle_files = index_puzzle_files()  # 퍼즐 파일 목록을 불러옵니다.
         puzzle_directory = os.path.join(path, "puzzle")
+        time_files = index_time_files()
+        time_directory = os.path.join(path, "time")
         print(f"Puzzle Button {index + 1} clicked.")  # 버튼 클릭 이벤트 핸들러 구현
         if (index + 1) % 2:
-            selected_puzzle_file = puzzle_files[index]  # 선택된 퍼즐 파일
+            selected_puzzle_file = puzzle_files[(index//2)]  # 선택된 퍼즐 파일
+            print((index//2))
+            selected_puzzle_path = os.path.join(puzzle_directory, selected_puzzle_file)
+            print("Selected puzzle file:", selected_puzzle_path)
+            self.close()
+            self.new_window = make_Time(selected_puzzle_path, selected_puzzle_file)  # selected_puzzle_file을 전달합니다.
+            self.new_window.show()
         else:
-            selected_puzzle_file = puzzle_files[index + 1]  # 선택된 퍼즐 파일 (짝수 버튼)
-        selected_puzzle_path = os.path.join(puzzle_directory, selected_puzzle_file)
-        print("Selected puzzle file:", selected_puzzle_path)
-        self.new_window = make_Time(selected_puzzle_path, selected_puzzle_file)  # selected_puzzle_file을 전달합니다.
-        self.new_window.show()
+            selected_time_file = time_files[(index//2)]  # 선택된 퍼즐 파일 (짝수 버튼)
+            print((index//2))
+            selected_time_path = os.path.join(time_directory, selected_time_file)
+            print("Selected puzzle file:", selected_time_path)
+            with open(selected_time_path, 'r') as file:
+                    ranking_data = file.readlines()  # 파일의 각 줄을 리스트로 읽기
+                    print(ranking_data)
+                    if ranking_data:  # 빈 파일이 아닌 경우
+                        # 문자열 리스트를 float 리스트로 변환
+                        ranking_data = [float(time.strip()) for time in ranking_data]
+                        # 리스트를 정렬
+                        sorted_ranking = sorted(ranking_data)
+                        # 순위와 시간을 함께 출력
+                        ranking_str = '\n'.join([f"{idx + 1}. {time} sec" for idx, time in enumerate(sorted_ranking)])
+                        QMessageBox.information(self, f"{(index//2)+1} Ranking", ranking_str)
+                    else:
+                        QMessageBox.information(self, f"{(index//2)+1} Ranking", "No ranking data available.")
+        
+        
 
 
 
@@ -289,6 +311,7 @@ class Time_UI(QMainWindow, second_2_1_form_class):
         self.close()
         self.new_window = Main_UI()
         self.new_window.show()
+
 
 class make_Time(QMainWindow, second_2_2_form_class):
     def __init__(self, selected_puzzle_path, selected_puzzle_file):
