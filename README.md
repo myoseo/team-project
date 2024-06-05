@@ -1,6 +1,6 @@
 # Algorithm-team_project
 
-<img src="https://capsule-render.vercel.app/api?type=rounded&color=auto&height=250&section=header&text=Square%20Logic&fontSize=90" />
+<img src="https://capsule-render.vercel.app/api?type=rounded&color=auto&height=250&section=header&text=Square%20Logic&fontSize=90" /></br>
 ![](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 **학번**|**이름**|**담당**|
 :---------:|:-----:|-------------
