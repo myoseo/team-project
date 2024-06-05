@@ -1,6 +1,6 @@
 # Algorithm-team_project
 
-<img src="https://capsule-render.vercel.app/api?type=wave&color=lightblue&height=300&section=header&text=Square%20Logic&fontSize=90" />
+<img src="https://capsule-render.vercel.app/api?type=wave&color=auto&height=300&section=header&text=Square%20Logic&fontSize=90" />
 
 **학번**|**이름**|**담당**|
 :---------:|:-----:|:-------------
