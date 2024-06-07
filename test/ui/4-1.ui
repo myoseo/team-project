@@ -13,24 +13,6 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <widget class="QLabel" name="label">
-   <property name="geometry">
-    <rect>
-     <x>485</x>
-     <y>20</y>
-     <width>130</width>
-     <height>81</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>40</pointsize>
-    </font>
-   </property>
-   <property name="text">
-    <string>랭킹</string>
-   </property>
-  </widget>
   <widget class="QPushButton" name="backButton">
    <property name="geometry">
     <rect>
@@ -41,18 +23,52 @@
     </rect>
    </property>
    <property name="text">
-    <string>뒤로가기</string>
+    <string>뒤로 가기</string>
    </property>
   </widget>
-  <widget class="QWidget" name="widget" native="true">
+  <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>130</x>
-     <y>160</y>
-     <width>831</width>
-     <height>611</height>
+     <x>450</x>
+     <y>14</y>
+     <width>200</width>
+     <height>41</height>
     </rect>
    </property>
+   <property name="font">
+    <font>
+     <pointsize>30</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>스테이지</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignJustify|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+  <widget class="QScrollArea" name="scrollArea">
+   <property name="geometry">
+    <rect>
+     <x>100</x>
+     <y>100</y>
+     <width>961</width>
+     <height>691</height>
+    </rect>
+   </property>
+   <property name="widgetResizable">
+    <bool>true</bool>
+   </property>
+   <widget class="QWidget" name="scrollAreaWidgetContents">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>959</width>
+      <height>689</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
  </widget>
  <resources/>

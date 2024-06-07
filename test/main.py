@@ -1,7 +1,6 @@
 import sys
 import time
 import json
-import re
 import os
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -22,8 +21,7 @@ second_2_2_form_path = os.path.join(path, "ui", "2-2.ui")
 second_3_1_form_path = os.path.join(path, "ui", "3-1.ui")
 second_3_2_form_path = os.path.join(path, "ui", "3-2.ui")
 second_4_1_form_path = os.path.join(path, "ui", "4-1.ui")
-second_5_1_form_path = os.path.join(path, "ui", "5-1.ui")
-second_5_2_form_path = os.path.join(path, "ui", "5-2.ui")
+second_4_2_form_path = os.path.join(path, "ui", "4-2.ui")
 
 main_form_class = uic.loadUiType(main_form_path)[0]
 second_1_1_form_class = uic.loadUiType(second_1_1_form_path)[0]
@@ -33,8 +31,7 @@ second_2_2_form_class = uic.loadUiType(second_2_2_form_path)[0]
 second_3_1_form_class = uic.loadUiType(second_3_1_form_path)[0]
 second_3_2_form_class = uic.loadUiType(second_3_2_form_path)[0]
 second_4_1_form_class = uic.loadUiType(second_4_1_form_path)[0]
-second_5_1_form_class = uic.loadUiType(second_5_1_form_path)[0]
-second_5_2_form_class = uic.loadUiType(second_5_2_form_path)[0]
+second_4_2_form_class = uic.loadUiType(second_4_2_form_path)[0]
 
 class Main_UI(QMainWindow, main_form_class):
     def __init__(self):
@@ -178,40 +175,35 @@ class Make_grid(QMainWindow, second_1_2_form_class):
         hints = {"rows": [], "columns": []}
         size = len(self.grid)
 
-        # DFS를 이용하여 힌트 계산
-        def dfs(x, y, visited, direction):
-            if not (0 <= x < size and 0 <= y < size):  # 그리드 범위를 벗어난 경우
-                return 0
-            if visited[x][y] or self.grid[x][y] == 0:  # 이미 방문했거나 값이 0인 경우
-                return 0
-            visited[x][y] = True  # 방문 표시
-            length = 1  # 길이 초기화
-            for dx, dy in direction:  # 주어진 방향으로 이동
-                nx, ny = x + dx, y + dy
-                length += dfs(nx, ny, visited, direction)  # 재귀 호출
-            return length
+        # 이중 for 문을 이용하여 힌트 계산
 
         # 행 힌트 계산
         for i in range(size):
             row_hint = []
-            visited = [[False] * size for _ in range(size)]  # 방문 배열 초기화
+            count = 0
             for j in range(size):
-                if self.grid[i][j] == 1 and not visited[i][j]:  # 방문하지 않은 1인 경우
-                    len_R = dfs(i, j, visited, [(0, 1), (0, -1)])  # DFS 호출
-                    if len_R > 0:
-                        row_hint.append(len_R)
-            hints["rows"].append(row_hint if row_hint else [0])  # 힌트 추가
+                if self.grid[i][j] == 1:
+                    count += 1
+                elif count > 0:
+                    row_hint.append(count)
+                    count = 0
+            if count > 0:
+                row_hint.append(count)
+            hints["rows"].append(row_hint if row_hint else [0])
 
         # 열 힌트 계산
         for j in range(size):
             col_hint = []
-            visited = [[False] * size for _ in range(size)]  # 방문 배열 초기화
+            count = 0
             for i in range(size):
-                if self.grid[i][j] == 1 and not visited[i][j]:  # 방문하지 않은 1인 경우
-                    len_C = dfs(i, j, visited, [(1, 0), (-1, 0)])  # DFS 호출
-                    if len_C > 0:
-                        col_hint.append(len_C)
-            hints["columns"].append(col_hint if col_hint else [0])  # 힌트 추가
+                if self.grid[i][j] == 1:
+                    count += 1
+                elif count > 0:
+                    col_hint.append(count)
+                    count = 0
+            if count > 0:
+                col_hint.append(count)
+            hints["columns"].append(col_hint if col_hint else [0])
 
         return hints
     
@@ -219,27 +211,32 @@ class Make_grid(QMainWindow, second_1_2_form_class):
 
         puzzle_directory = os.path.join(path, "puzzle")
         time_directory = os.path.join(path, "time")
+        hint_directory = os.path.join(path, "hint")
 
         # 'puzzle' 디렉토리가 없으면 생성
         if not os.path.exists(puzzle_directory):
             os.makedirs(puzzle_directory)
         if not os.path.exists(time_directory):
             os.makedirs(time_directory)
+        if not os.path.exists(hint_directory):
+            os.makedirs(hint_directory)
 
         # 고유 이름의 파일
         current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-        current_time_2 = datetime.now().strftime("%Y%m%d_%H%M%S")
         # 파일 경로 지정
         file_path = os.path.join(puzzle_directory, f"puzzle_{current_time}.txt")
-        time_path = os.path.join(time_directory, f"time_{current_time_2}.txt")
+        hint_path = os.path.join(hint_directory, f"hint_{current_time}.txt")
 
         puzzle_data = {
             'grid': self.grid,
+        }
+        hint_data = {
             'hints': self.generate_hint()
         }
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(puzzle_data, f, ensure_ascii=False, indent=4)
-        open(time_path, 'w').close()
+        with open(hint_path, 'w', encoding='utf-8') as f:
+            json.dump(hint_data, f, ensure_ascii=False, indent=4)
         self.close()
         self.new_window = Main_UI()
         self.new_window.show()
@@ -248,7 +245,6 @@ class Make_grid(QMainWindow, second_1_2_form_class):
         self.close()
         self.new_window = Make_UI()
         self.new_window.show()
-
 
 
 class Time_UI(QMainWindow, second_2_1_form_class):
@@ -287,29 +283,28 @@ class Time_UI(QMainWindow, second_2_1_form_class):
         puzzle_directory = os.path.join(path, "puzzle")
         time_files = index_time_files()
         time_directory = os.path.join(path, "time")
+        hint_files = index_hint_files()
+        hint_directory = os.path.join(path, "hint")
         print(f"Puzzle Button {index + 1} clicked.")  # 버튼 클릭 이벤트 핸들러 구현
         if (index + 1) % 2:
             selected_puzzle_file = puzzle_files[(index // 2)]  # 선택된 퍼즐 파일
-            print((index // 2))
+            selected_hint_file = hint_files[(index // 2)]  # 선택된 힌트 파일
             selected_puzzle_path = os.path.join(puzzle_directory, selected_puzzle_file)
-            print("Selected puzzle file:", selected_puzzle_path)
+            selected_hint_path = os.path.join(hint_directory, selected_hint_file)
             self.close()
-            self.new_window = make_Time(selected_puzzle_path, selected_puzzle_file)  # selected_puzzle_file을 전달합니다.
+            self.new_window = make_Time(selected_puzzle_path, selected_puzzle_file, selected_hint_path)  # selected_puzzle_file을 전달합니다.
             self.new_window.show()
         else:
             selected_puzzle_file = puzzle_files[(index // 2)]  # 선택된 퍼즐 파일에 해당하는 타임 파일을 매칭
-            time_file_name = os.path.splitext(selected_puzzle_file)[0] + "_1.txt"  # 타임 파일 이름 생성
+            time_file_name = os.path.splitext(selected_puzzle_file)[0] + "_time.txt"  # 타임 파일 이름 생성
             selected_time_path = os.path.join(time_directory, time_file_name)
-            print("Selected time file:", selected_time_path)
-            
             if os.path.exists(selected_time_path):
                 with open(selected_time_path, 'r') as file:
                     ranking_data = file.readlines()  # 파일의 각 줄을 리스트로 읽기
-                    print(ranking_data)
                     if ranking_data:  # 빈 파일이 아닌 경우
                         time = []
-                        for time_line in ranking_data :
-                            start_time = time_line.index(":")+1
+                        for time_line in ranking_data:
+                            start_time = time_line.index(":") + 1
                             end_time = time_line.index("}")
                             time_value = float(time_line[start_time:end_time].strip())
                             time.append(time_value)
@@ -322,27 +317,27 @@ class Time_UI(QMainWindow, second_2_1_form_class):
             else:
                 QMessageBox.information(self, f"{(index // 2) + 1} Ranking", "No ranking data available.")
 
-        
-
-    def backFunction(self) :
+    def backFunction(self):
         self.close()
         self.new_window = Main_UI()
         self.new_window.show()
 
 
 class make_Time(QMainWindow, second_2_2_form_class):
-    def __init__(self, selected_puzzle_path, selected_puzzle_file):
+    def __init__(self, selected_puzzle_path, selected_puzzle_file, selected_hint_path):
         super().__init__()
         self.setupUi(self)
         self.backButton.clicked.connect(self.backFunction)
         self.life = 3
         self.set_timer = 600        # 10분 타이머 설정
-        self.load_puzzle(selected_puzzle_path)
-        self.selected_puzzle_file = selected_puzzle_file 
-    
-    def load_puzzle(self, selected_puzzle_path):
+        self.load_puzzle(selected_puzzle_path, selected_hint_path)
+        self.selected_puzzle_file = selected_puzzle_file
+
+    def load_puzzle(self, selected_puzzle_path, selected_hint_path):
         with open(selected_puzzle_path, 'r') as file:
             self.current_puzzle = json.load(file)
+        with open(selected_hint_path, 'r') as file:
+            self.hints = json.load(file)["hints"]
         self.life = 3
         self.update_life()
         self.game_grid = self.current_puzzle['grid']
@@ -362,8 +357,8 @@ class make_Time(QMainWindow, second_2_2_form_class):
         self.create_puzzle_grid(size)
 
     def display_hints(self, size):
-        row_hints = self.generate_hints(self.game_grid)
-        col_hints = self.generate_hints(zip(*self.game_grid))  # Transpose for column hints
+        row_hints = self.hints["rows"]
+        col_hints = self.hints["columns"]
 
         for i in range(size):
             hint_label = QLabel(' '.join(map(str, row_hints[i])))
@@ -373,22 +368,6 @@ class make_Time(QMainWindow, second_2_2_form_class):
             hint_label = QLabel(' '.join(map(str, col_hints[j])))
             self.logic_pan.addWidget(hint_label, 0, j + 1)
 
-    def generate_hints(self, lines):
-        hints = []
-        for line in lines:
-            hint = []
-            count = 0
-            for cell in line:
-                if cell == 1:
-                    count += 1
-                elif count > 0:
-                    hint.append(count)
-                    count = 0
-            if count > 0:
-                hint.append(count)
-            hints.append(hint or [0])
-        return hints
-
     def create_puzzle_grid(self, size):
         for i in range(size):
             row_buttons = []
@@ -396,7 +375,7 @@ class make_Time(QMainWindow, second_2_2_form_class):
                 button = QPushButton()
                 button.setCheckable(True)
                 button.clicked.connect(self.create_button_handler(i, j))
-                button_size = min(800 // size, 800 // size)  # 퍼즐 크기에 따라 버튼 크기 조정
+                button_size = min(600 // size, 600 // size)  # 퍼즐 크기에 따라 버튼 크기 조정
                 button.setFixedSize(button_size, button_size)
                 self.logic_pan.addWidget(button, i + 1, j + 1)
                 row_buttons.append(button)
@@ -419,9 +398,6 @@ class make_Time(QMainWindow, second_2_2_form_class):
             self.new_window = Time_UI()
             self.new_window.show()
 
-
-
-
     def check_answer(self, x, y):
         if self.game_grid[x][y] == 1:
             self.game_buttons[x][y].setStyleSheet('background-color: black')
@@ -433,14 +409,11 @@ class make_Time(QMainWindow, second_2_2_form_class):
             return
 
         if check_clear(self.game_grid, self.game_buttons):
-            index_time = index_time_files()
-            self.time_save_file(1)
+            self.time_save_file('time')
             QMessageBox.information(self, "Clear!", "정답입니다")
             self.close()
             self.new_window = Time_UI()
             self.new_window.show()
-
-    
 
     def update_life(self):
         self.heart.setText(f"life: {self.life}")
@@ -456,7 +429,6 @@ class make_Time(QMainWindow, second_2_2_form_class):
         self.new_window = Main_UI()
         self.new_window.show()
 
-    
     def time_save_file(self, index):
         time_path = os.path.join(path, "time")
 
@@ -478,7 +450,7 @@ class make_Time(QMainWindow, second_2_2_form_class):
         with open(selected_time_path, "a") as file:
             file.write(json.dumps(time_data) + "\n")
 
-    
+
 class Stage_UI(QMainWindow, second_3_1_form_class):
     def __init__(self):
         super().__init__()
@@ -487,7 +459,6 @@ class Stage_UI(QMainWindow, second_3_1_form_class):
         self.stage_button()
 
     def stage_button(self):
-
         file_count = count_puzzle_files()
 
         layout = QGridLayout()  # 버튼을 배치할 그리드 레이아웃 생성
@@ -507,42 +478,46 @@ class Stage_UI(QMainWindow, second_3_1_form_class):
     def puzzle_button_clicked(self, index):
         # 퍼즐 파일 목록을 가져옴
         puzzle_files = index_puzzle_files()
+        puzzle_directory = os.path.join(path, "puzzle") # 퍼즐 파일이 위치한 디렉토리
+        hint_files = index_hint_files()
+        hint_directory = os.path.join(path, "hint") #힌트 파일 디렉토리
         
         # 인덱스가 퍼즐 파일 개수 이내에 있는지 확인
         if 0 <= index < len(puzzle_files):
             selected_puzzle_file = puzzle_files[index]  # 선택된 퍼즐 파일
-            puzzle_directory = os.path.join(path, "puzzle")  # 퍼즐 파일이 위치한 디렉토리
+            selected_hint_file = hint_files[index]  #선택된 힌트 파일
 
             # 선택된 퍼즐 파일 경로
             selected_puzzle_path = os.path.join(puzzle_directory, selected_puzzle_file)
+            selected_hint_path = os.path.join(hint_directory, selected_hint_file)
 
             # 선택된 퍼즐 파일을 불러오는 함수 호출 (예시로 print 함수를 사용)
             print("Selected puzzle file:", selected_puzzle_path)
             self.close()
-            self.new_window = make_stage(selected_puzzle_path)
+            self.new_window = make_stage(selected_puzzle_path, selected_hint_path)
             self.new_window.show()
             
         else:
             print("Invalid puzzle index")
-            
-
 
     def backFunction(self):
         self.close()
         self.new_window = Main_UI()
         self.new_window.show()
-#네모로직 채점 부분
+
 class make_stage(QMainWindow, second_3_2_form_class):
-    def __init__(self, selected_puzzle_path):
+    def __init__(self, selected_puzzle_path, selected_hint_path):
         super().__init__()
         self.setupUi(self)
         self.backButton.clicked.connect(self.backFunction)
         self.life = 3
-        self.load_puzzle(selected_puzzle_path)
+        self.load_puzzle(selected_puzzle_path, selected_hint_path)
 
-    def load_puzzle(self, selected_puzzle_path):
+    def load_puzzle(self, selected_puzzle_path, selected_hint_path):
         with open(selected_puzzle_path, 'r') as file:
             self.current_puzzle = json.load(file)
+        with open(selected_hint_path, 'r') as file:
+            self.hints = json.load(file)["hints"]
         self.life = 3
         self.update_life()
         self.game_grid = self.current_puzzle['grid']
@@ -558,8 +533,8 @@ class make_stage(QMainWindow, second_3_2_form_class):
         self.create_puzzle_grid(size)
 
     def display_hints(self, size):
-        row_hints = self.generate_hints(self.game_grid)
-        col_hints = self.generate_hints(zip(*self.game_grid))  # Transpose for column hints
+        row_hints = self.hints["rows"]
+        col_hints = self.hints["columns"]  # Transpose for column hints
 
         for i in range(size):
             hint_label = QLabel(' '.join(map(str, row_hints[i])))
@@ -569,22 +544,6 @@ class make_stage(QMainWindow, second_3_2_form_class):
             hint_label = QLabel(' '.join(map(str, col_hints[j])))
             self.logic_pan.addWidget(hint_label, 0, j + 1)
 
-    def generate_hints(self, lines):
-        hints = []
-        for line in lines:
-            hint = []
-            count = 0
-            for cell in line:
-                if cell == 1:
-                    count += 1
-                elif count > 0:
-                    hint.append(count)
-                    count = 0
-            if count > 0:
-                hint.append(count)
-            hints.append(hint or [0])
-        return hints
-
     def create_puzzle_grid(self, size):
         for i in range(size):
             row_buttons = []
@@ -592,7 +551,7 @@ class make_stage(QMainWindow, second_3_2_form_class):
                 button = QPushButton()
                 button.setCheckable(True)
                 button.clicked.connect(self.create_button_handler(i, j))
-                button_size = min(800 // size, 800 // size)  # 퍼즐 크기에 따라 버튼 크기 조정
+                button_size = min(600 // size, 600 // size)  # 퍼즐 크기에 따라 버튼 크기 조정
                 button.setFixedSize(button_size, button_size)
                 self.logic_pan.addWidget(button, i + 1, j + 1)
                 row_buttons.append(button)
@@ -619,7 +578,6 @@ class make_stage(QMainWindow, second_3_2_form_class):
             self.new_window = Stage_UI()
             self.new_window.show()
 
-
     def update_life(self):
         self.heart.setText(f"life: {self.life}")
 
@@ -633,8 +591,8 @@ class make_stage(QMainWindow, second_3_2_form_class):
         self.close()
         self.new_window = Main_UI()
         self.new_window.show()
-# 자동 풀이 부분
-class Ai_UI(QMainWindow, second_5_1_form_class):
+
+class Ai_UI(QMainWindow, second_4_1_form_class):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
@@ -683,7 +641,7 @@ class Ai_UI(QMainWindow, second_5_1_form_class):
         self.new_window = Main_UI()
         self.new_window.show()
 
-class answering_service(QMainWindow, second_5_2_form_class):
+class answering_service(QMainWindow, second_4_2_form_class):
     def __init__(self, selected_puzzle_path):
         super().__init__()
         self.setupUi(self)
@@ -702,8 +660,64 @@ class answering_service(QMainWindow, second_5_2_form_class):
             if widget:
                 widget.setParent(None)
                 
+        self.display_hints(size)
         self.create_puzzle_grid(size)
         self.search_graph(size)
+
+    def display_hints(self, size):
+        hints = self.generate_hint()  # DFS 방식으로 힌트 생성
+        row_hints = hints["rows"]
+        col_hints = hints["columns"]
+
+        for i in range(size):
+            hint_label = QLabel(' '.join(map(str, row_hints[i])))
+            self.logic_pan.addWidget(hint_label, i + 1, 0)
+
+        for j in range(size):
+            hint_label = QLabel(' '.join(map(str, col_hints[j])))
+            self.logic_pan.addWidget(hint_label, 0, j + 1)
+
+    def generate_hint(self):
+        # 힌트를 생성하는 함수
+        hints = {"rows": [], "columns": []}
+        size = len(self.game_grid)
+
+        # DFS를 이용하여 힌트 계산
+        def dfs(x, y, visited, direction):
+            if not (0 <= x < size and 0 <= y < size):  # 그리드 범위를 벗어난 경우
+                return 0
+            if visited[x][y] or self.game_grid[x][y] == 0:  # 이미 방문했거나 값이 0인 경우
+                return 0
+            visited[x][y] = True  # 방문 표시
+            length = 1  # 길이 초기화
+            for dx, dy in direction:  # 주어진 방향으로 이동
+                nx, ny = x + dx, y + dy
+                length += dfs(nx, ny, visited, direction)  # 재귀 호출
+            return length
+
+        # 행 힌트 계산
+        for i in range(size):
+            row_hint = []
+            visited = [[False] * size for _ in range(size)]  # 방문 배열 초기화
+            for j in range(size):
+                if self.game_grid[i][j] == 1 and not visited[i][j]:  # 방문하지 않은 1인 경우
+                    len_R = dfs(i, j, visited, [(0, 1), (0, -1)])  # DFS 호출
+                    if len_R > 0:
+                        row_hint.append(len_R)
+            hints["rows"].append(row_hint if row_hint else [0])  # 힌트 추가
+
+        # 열 힌트 계산
+        for j in range(size):
+            col_hint = []
+            visited = [[False] * size for _ in range(size)]  # 방문 배열 초기화
+            for i in range(size):
+                if self.game_grid[i][j] == 1 and not visited[i][j]:  # 방문하지 않은 1인 경우
+                    len_C = dfs(i, j, visited, [(1, 0), (-1, 0)])  # DFS 호출
+                    if len_C > 0:
+                        col_hint.append(len_C)
+            hints["columns"].append(col_hint if col_hint else [0])  # 힌트 추가
+
+        return hints
 
     def create_puzzle_grid(self, size):
         self.game_buttons = []  # 게임 버튼 초기화
@@ -713,7 +727,7 @@ class answering_service(QMainWindow, second_5_2_form_class):
                 button = QPushButton()
                 button.setCheckable(True)
                 button.clicked.connect(self.create_button_handler(i, j))
-                button_size = min(800 // size, 800 // size)  # 퍼즐 크기에 따라 버튼 크기 조정
+                button_size = min(600 // size, 600 // size)  # 퍼즐 크기에 따라 버튼 크기 조정
                 button.setFixedSize(button_size, button_size)
                 self.logic_pan.addWidget(button, i + 1, j + 1)
                 row_buttons.append(button)
@@ -793,8 +807,16 @@ def index_time_files() :
 
     return time_txt_file
 
+def index_hint_files() :
 
+    hint_dir = os.path.join(path, "hint")
 
+    hint_files = os.listdir(hint_dir)
+
+    hint_txt_file = [f for f in hint_files if f.endswith('.txt')]
+    hint_txt_file.sort(key=lambda x: os.path.getmtime(os.path.join(hint_dir, x)), reverse=True)
+
+    return hint_txt_file
 
 
 if __name__ == "__main__":
@@ -811,4 +833,3 @@ if __name__ == "__main__":
     
     # 프로그램을 이벤트 루프로 진입시키는(프로그램을 작동시키는) 코드
     sys.exit(app.exec_())
-    
