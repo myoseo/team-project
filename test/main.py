@@ -118,7 +118,6 @@ class Make_grid(QMainWindow, second_1_2_form_class):
             child = self.logic_pan.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
-
         # 그리드 데이터 초기화
         self.grid = [[0 for _ in range(size)] for _ in range(size)]
         self.buttons = []  # 버튼 리스트 초기화
@@ -129,6 +128,7 @@ class Make_grid(QMainWindow, second_1_2_form_class):
             for j in range(size):
                 button = QPushButton()
                 button.setCheckable(True)  # 버튼을 체크 가능한 상태로 설정
+                button.setStyleSheet('background-color: white')
                 button.clicked.connect(self.create_button_handler(i, j))  # 버튼 클릭 시 이벤트 핸들러 연결
                 button_size = min(600 // size, 600 // size)  # 버튼 크기 설정
                 button.setFixedSize(button_size, button_size)
@@ -382,6 +382,7 @@ class make_Time(QMainWindow, second_2_2_form_class):
             for j in range(size):
                 button = QPushButton()
                 button.setCheckable(True)
+                button.setStyleSheet('background-color: white')
                 button.clicked.connect(self.create_button_handler(i, j))
                 button_size = min(600 // size, 600 // size)  # 퍼즐 크기에 따라 버튼 크기 조정
                 button.setFixedSize(button_size, button_size)
@@ -558,6 +559,7 @@ class make_stage(QMainWindow, second_3_2_form_class):
             for j in range(size):
                 button = QPushButton()
                 button.setCheckable(True)
+                button.setStyleSheet('background-color: white')
                 button.clicked.connect(self.create_button_handler(i, j))
                 button_size = min(600 // size, 600 // size)  # 퍼즐 크기에 따라 버튼 크기 조정
                 button.setFixedSize(button_size, button_size)
@@ -734,6 +736,7 @@ class ai_stage(QMainWindow, second_4_2_form_class):
             for j in range(size):
                 button = QPushButton()
                 button.setCheckable(True)
+                button.setStyleSheet('background-color: white')
                 button.clicked.connect(self.create_button_handler(i, j))
                 button_size = min(600 // size, 600 // size)  # 퍼즐 크기에 따라 버튼 크기 조정
                 button.setFixedSize(button_size, button_size)
