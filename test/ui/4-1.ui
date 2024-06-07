@@ -29,8 +29,8 @@
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>450</x>
-     <y>14</y>
+     <x>460</x>
+     <y>30</y>
      <width>200</width>
      <height>41</height>
     </rect>
@@ -43,8 +43,11 @@
    <property name="text">
     <string>스테이지</string>
    </property>
+   <property name="textFormat">
+    <enum>Qt::AutoText</enum>
+   </property>
    <property name="alignment">
-    <set>Qt::AlignJustify|Qt::AlignVCenter</set>
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QScrollArea" name="scrollArea">

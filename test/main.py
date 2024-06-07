@@ -72,15 +72,24 @@ class Make_UI(QMainWindow, second_1_1_form_class):
         self.setupUi(self)
         self.backButton.clicked.connect(self.backFunction)
         self.selectbutton.clicked.connect(self.Function)
+        self.select_pan.returnPressed.connect(self.Function)
 
     def Function(self) :
-        text = self.select_pan.toPlainText()
-        make_grid_instance = Make_grid()  # Make_grid 클래스의 인스턴스 생성
-        make_grid_instance.set_size(int(text))  # set_size 메서드 호출
-        self.close()
-        self.new_window = make_grid_instance
-        self.new_window.show()
-    
+        # 크기 값을 입력받음
+        try :
+            text = int(self.select_pan.text())
+            if text >=1 and text <= 20 :
+                make_grid_instance = Make_grid()  # Make_grid 클래스의 인스턴스 생성
+                make_grid_instance.set_size(text)  # set_size 메서드 호출
+                self.close()
+                self.new_window = make_grid_instance
+                self.new_window.show()
+            else :                
+                QMessageBox.information(self, "오류!", "값 입력에 실패했습니다.\n숫자가 제대로 입력되었는지 확인해주세요.\n1~20까지의 수만 입력이 가능합니다.")
+        except :
+            QMessageBox.information(self, "오류!", "값 입력에 실패했습니다.\n숫자가 제대로 입력되었는지 확인해주세요.\n1~20까지의 수만 입력이 가능합니다.")
+
+
     def backFunction(self) :
         self.close()
         self.new_window = Main_UI()
@@ -171,11 +180,11 @@ class Make_grid(QMainWindow, second_1_2_form_class):
             self.col_hint_labels.append(hint_label)  # 리스트에 레이블 추가
 
     def generate_hint(self):
+        # 이중 for문을 통해 힌트 계산
+
         # 힌트를 생성하는 함수
         hints = {"rows": [], "columns": []}
         size = len(self.grid)
-
-        # 이중 for 문을 이용하여 힌트 계산
 
         # 행 힌트 계산
         for i in range(size):
@@ -213,7 +222,7 @@ class Make_grid(QMainWindow, second_1_2_form_class):
         time_directory = os.path.join(path, "time")
         hint_directory = os.path.join(path, "hint")
 
-        # 'puzzle' 디렉토리가 없으면 생성
+        # 해당 디렉토리가 없으면 생성
         if not os.path.exists(puzzle_directory):
             os.makedirs(puzzle_directory)
         if not os.path.exists(time_directory):

@@ -53,7 +53,7 @@
    <property name="geometry">
     <rect>
      <x>450</x>
-     <y>4</y>
+     <y>30</y>
      <width>200</width>
      <height>41</height>
     </rect>
@@ -67,7 +67,7 @@
     <string>스테이지</string>
    </property>
    <property name="alignment">
-    <set>Qt::AlignJustify|Qt::AlignVCenter</set>
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
  </widget>
