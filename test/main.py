@@ -273,7 +273,7 @@ class Time_UI(QMainWindow, second_2_1_form_class):
             layout.addWidget(button1, row, col)  # 첫 번째 버튼 추가
 
             # 다음 열에 두 번째 버튼 추가
-            button2 = QPushButton(f"Puzzle{i+1} Rakning", self)
+            button2 = QPushButton(f"Puzzle{i+1} Ranking", self)
             button2.clicked.connect(lambda _, x=2*i + 1: self.puzzle_button_clicked(x))
             layout.addWidget(button2, row, col + 1)
 
@@ -289,31 +289,39 @@ class Time_UI(QMainWindow, second_2_1_form_class):
         time_directory = os.path.join(path, "time")
         print(f"Puzzle Button {index + 1} clicked.")  # 버튼 클릭 이벤트 핸들러 구현
         if (index + 1) % 2:
-            selected_puzzle_file = puzzle_files[(index//2)]  # 선택된 퍼즐 파일
-            print((index//2))
+            selected_puzzle_file = puzzle_files[(index // 2)]  # 선택된 퍼즐 파일
+            print((index // 2))
             selected_puzzle_path = os.path.join(puzzle_directory, selected_puzzle_file)
             print("Selected puzzle file:", selected_puzzle_path)
             self.close()
             self.new_window = make_Time(selected_puzzle_path, selected_puzzle_file)  # selected_puzzle_file을 전달합니다.
             self.new_window.show()
         else:
-            selected_time_file = time_files[(index//2)]  # 선택된 퍼즐 파일 (짝수 버튼)
-            print((index//2))
-            selected_time_path = os.path.join(time_directory, selected_time_file)
-            print("Selected puzzle file:", selected_time_path)
-            with open(selected_time_path, 'r') as file:
+            selected_puzzle_file = puzzle_files[(index // 2)]  # 선택된 퍼즐 파일에 해당하는 타임 파일을 매칭
+            time_file_name = os.path.splitext(selected_puzzle_file)[0] + "_1.txt"  # 타임 파일 이름 생성
+            selected_time_path = os.path.join(time_directory, time_file_name)
+            print("Selected time file:", selected_time_path)
+            
+            if os.path.exists(selected_time_path):
+                with open(selected_time_path, 'r') as file:
                     ranking_data = file.readlines()  # 파일의 각 줄을 리스트로 읽기
                     print(ranking_data)
                     if ranking_data:  # 빈 파일이 아닌 경우
-                        # 문자열 리스트를 float 리스트로 변환
-                        ranking_data = [float(time.strip()) for time in ranking_data]
+                        time = []
+                        for time_line in ranking_data :
+                            start_time = time_line.index(":")+1
+                            end_time = time_line.index("}")
+                            time_value = float(time_line[start_time:end_time].strip())
+                            time.append(time_value)
+                        ranking_data = [(time.strip()) for time in ranking_data]
                         # 리스트를 정렬
-                        sorted_ranking = sorted(ranking_data)
+                        sorted_ranking = sorted(time)
                         # 순위와 시간을 함께 출력
                         ranking_str = '\n'.join([f"{idx + 1}. {time} sec" for idx, time in enumerate(sorted_ranking)])
-                        QMessageBox.information(self, f"{(index//2)+1} Ranking", ranking_str)
-                    else:
-                        QMessageBox.information(self, f"{(index//2)+1} Ranking", "No ranking data available.")
+                        QMessageBox.information(self, f"{(index // 2) + 1} Ranking", ranking_str)
+            else:
+                QMessageBox.information(self, f"{(index // 2) + 1} Ranking", "No ranking data available.")
+
         
 
     def backFunction(self) :
@@ -328,6 +336,7 @@ class make_Time(QMainWindow, second_2_2_form_class):
         self.setupUi(self)
         self.backButton.clicked.connect(self.backFunction)
         self.life = 3
+        self.set_timer = 600        # 10분 타이머 설정
         self.load_puzzle(selected_puzzle_path)
         self.selected_puzzle_file = selected_puzzle_file 
     
@@ -339,10 +348,10 @@ class make_Time(QMainWindow, second_2_2_form_class):
         self.game_grid = self.current_puzzle['grid']
         size = len(self.game_grid)
         self.game_buttons = []
-        self.real_time = 60  # 1분 타이머 초기화
+        self.real_time = self.set_timer
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_time)
-        self.timer.start(1000)  
+        self.timer.start(10)  
 
         for i in reversed(range(self.logic_pan.count())):  # 퍼즐 그리드 초기화
             widget = self.logic_pan.itemAt(i).widget()
@@ -399,13 +408,13 @@ class make_Time(QMainWindow, second_2_2_form_class):
         return handler
     
     def update_time(self):
-        self.real_time -= 1  # real_time 값을 1씩 감소시킵니다.
+        self.real_time -= 0.01  # real_time 값을 1씩 감소시킵니다.
         minutes, seconds = divmod(self.real_time, 60)
-        time_text = f"{minutes:02d}:{seconds:02d}"
+        time_text = f"{minutes:02.0f}:{seconds:02.2f}"
         self.time.setText(f"time: {time_text}")
         if self.real_time <= 0:
             self.timer.stop()
-            QMessageBox.information(self, "시간종료")
+            QMessageBox.information(self, "!시간종료!", "문제 풀이에 실패했습니다.")
             self.close()
             self.new_window = Time_UI()
             self.new_window.show()
@@ -424,8 +433,9 @@ class make_Time(QMainWindow, second_2_2_form_class):
             return
 
         if check_clear(self.game_grid, self.game_buttons):
+            index_time = index_time_files()
+            self.time_save_file(1)
             QMessageBox.information(self, "Clear!", "정답입니다")
-            lambda _, x=1: self.time_save_file(x)
             self.close()
             self.new_window = Time_UI()
             self.new_window.show()
@@ -447,13 +457,27 @@ class make_Time(QMainWindow, second_2_2_form_class):
         self.new_window.show()
 
     
-    def time_save_file(self):
-        # path 현재 파일 경로
+    def time_save_file(self, index):
         time_path = os.path.join(path, "time")
-        selected_time_path = os.path.join(time_path, self.selected_puzzle_file)  # 인스턴스 변수를 사용합니다.
-        time_data = {"real_time": self.real_time}
-        with open(selected_time_path, "w") as file:
-            json.dump(time_data, file)
+
+        # time 디렉토리가 없는 경우 생성, 디렉토리 파일이 이미 존재해도 오류 발생하지 않음
+        if not os.path.exists(time_path):
+            os.makedirs(time_path)
+
+        # index 사용하여 고유한 파일 이름 생성
+        # file_name, file_extension 분리 ex) a.json 파일에 index 1인 경우 a.1.json 저장
+        file_name, file_extension = os.path.splitext(self.selected_puzzle_file)
+        indexed_file_name = f"{file_name}_{index}{file_extension}"
+        
+        selected_time_path = os.path.join(time_path, indexed_file_name)
+        #소수점 반올림
+        r_time = round(self.set_timer - self.real_time, 2)
+        time_data = {"real_time": r_time}
+
+        # 파일에 새로운 줄로 추가 (append)
+        with open(selected_time_path, "a") as file:
+            file.write(json.dumps(time_data) + "\n")
+
     
 class Stage_UI(QMainWindow, second_3_1_form_class):
     def __init__(self):
