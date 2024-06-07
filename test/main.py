@@ -1,5 +1,6 @@
 import sys
 import json
+from collections import deque
 import os
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -651,6 +652,7 @@ class Ai_UI(QMainWindow, second_4_1_form_class):
         self.new_window = Main_UI()
         self.new_window.show()
 
+
 class ai_stage(QMainWindow, second_4_2_form_class):
     def __init__(self, selected_puzzle_path):
         super().__init__()
@@ -750,23 +752,63 @@ class ai_stage(QMainWindow, second_4_2_form_class):
         return handler
 
     def search_graph(self, size):
+        colored_queue = deque()
+        uncolored_queue = deque()
+        
+        # 초기 상태에서 큐에 색칠된 부분과 색칠되지 않은 부분 추가
         for i in range(size):
             for j in range(size):
-                self.check(i, j)
-                
-    def check(self, x, y):
-        if x < 0 or x >= len(self.game_grid) or y < 0 or y >= len(self.game_grid):
-            return  # 범위를 벗어나는 경우
+                if self.game_grid[i][j] == 1:
+                    colored_queue.append((i, j))
+                else:
+                    uncolored_queue.append((i, j))
 
-        if self.game_grid[x][y] == 1:  # 체크되어 있다면
-            self.game_buttons[x][y].setStyleSheet('background-color: black')
+        # BFS로 퍼즐 해결
+        while colored_queue or uncolored_queue:
+            while colored_queue:
+                x, y = colored_queue.popleft()
+                self.process_node(x, y, True, uncolored_queue)
 
-        if check_clear(self.game_grid, self.game_buttons):
+            while uncolored_queue:
+                x, y = uncolored_queue.popleft()
+                self.process_node(x, y, False, colored_queue)
+
+        if self.check_clear():
             QMessageBox.information(self, "Clear!", "자동풀이 완료")
             self.close()
             self.new_window = Ai_UI()
             self.new_window.show()
-    
+
+    def process_node(self, x, y, is_colored, queue):
+        if x < 0 or x >= len(self.game_grid) or y < 0 or y >= len(self.game_grid):
+            return  # 범위를 벗어나는 경우
+
+        if is_colored and self.game_grid[x][y] == 1:
+            self.game_buttons[x][y].setStyleSheet('background-color: black')
+        elif not is_colored and self.game_grid[x][y] == 0:
+            self.game_buttons[x][y].setStyleSheet('background-color: white')
+
+        for nx, ny in self.get_neighbors(x, y):
+            if self.game_grid[nx][ny] == -1:
+                self.game_grid[nx][ny] = 0 if is_colored else 1
+                queue.append((nx, ny))
+
+    def get_neighbors(self, x, y):
+        # 인접한 칸들을 반환
+        size = len(self.game_grid)
+        neighbors = []
+        if x > 0:
+            neighbors.append((x-1, y))
+        if x < size-1:
+            neighbors.append((x+1, y))
+        if y > 0:
+            neighbors.append((x, y-1))
+        if y < size-1:
+            neighbors.append((x, y+1))
+        return neighbors
+
+
+
     def backFunction(self):
         self.close()
         self.new_window = Main_UI()
