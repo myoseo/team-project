@@ -1,5 +1,4 @@
 import sys
-import time
 import json
 import os
 from watchdog.observers import Observer
@@ -639,7 +638,7 @@ class Ai_UI(QMainWindow, second_4_1_form_class):
             # 선택된 퍼즐 파일을 불러오는 함수 호출 (예시로 print 함수를 사용)
             print("Selected puzzle file:", selected_puzzle_path)
             self.close()
-            self.new_window = answering_service(selected_puzzle_path)
+            self.new_window = ai_stage(selected_puzzle_path)
             self.new_window.show()
             
         else:
@@ -650,7 +649,7 @@ class Ai_UI(QMainWindow, second_4_1_form_class):
         self.new_window = Main_UI()
         self.new_window.show()
 
-class answering_service(QMainWindow, second_4_2_form_class):
+class ai_stage(QMainWindow, second_4_2_form_class):
     def __init__(self, selected_puzzle_path):
         super().__init__()
         self.setupUi(self)
@@ -671,19 +670,19 @@ class answering_service(QMainWindow, second_4_2_form_class):
                 
         self.display_hints(size)
         self.create_puzzle_grid(size)
-        self.search_graph(size)
+        self.apply_hints(size)
 
     def display_hints(self, size):
         hints = self.generate_hint()  # DFS 방식으로 힌트 생성
-        row_hints = hints["rows"]
-        col_hints = hints["columns"]
+        self.row_hints = hints["rows"]
+        self.col_hints = hints["columns"]
 
         for i in range(size):
-            hint_label = QLabel(' '.join(map(str, row_hints[i])))
+            hint_label = QLabel(' '.join(map(str, self.row_hints[i])))
             self.logic_pan.addWidget(hint_label, i + 1, 0)
 
         for j in range(size):
-            hint_label = QLabel(' '.join(map(str, col_hints[j])))
+            hint_label = QLabel(' '.join(map(str, self.col_hints[j])))
             self.logic_pan.addWidget(hint_label, 0, j + 1)
 
     def generate_hint(self):
@@ -747,11 +746,37 @@ class answering_service(QMainWindow, second_4_2_form_class):
             self.check(x, y)
         return handler
 
-    def search_graph(self, size):
+    def apply_hints(self, size):
+        # 행 힌트에 따라 색칠
+        row_patterns = [[0] * size for _ in range(size)]
+        for i in range(size):
+            if self.row_hints[i] == [0]:
+                continue
+            col = 0
+            for length in self.row_hints[i]:
+                for _ in range(length):
+                    row_patterns[i][col] = 1
+                    col += 1
+                col += 1  # 다음 블록과의 간격
+
+        # 열 힌트에 따라 색칠
+        col_patterns = [[0] * size for _ in range(size)]
+        for j in range(size):
+            if self.col_hints[j] == [0]:
+                continue
+            row = 0
+            for length in self.col_hints[j]:
+                for _ in range(length):
+                    col_patterns[row][j] = 1
+                    row += 1
+                row += 1  # 다음 블록과의 간격
+
+        # 일치하는 부분 색칠
         for i in range(size):
             for j in range(size):
-                self.check(i, j)
-                
+                if row_patterns[i][j] == 1 and col_patterns[i][j] == 1:
+                    self.game_buttons[i][j].setStyleSheet('background-color: black')
+
     def check(self, x, y):
         if x < 0 or x >= len(self.game_grid) or y < 0 or y >= len(self.game_grid):
             return  # 범위를 벗어나는 경우
@@ -764,11 +789,12 @@ class answering_service(QMainWindow, second_4_2_form_class):
             self.close()
             self.new_window = Ai_UI()
             self.new_window.show()
-    
+
     def backFunction(self):
         self.close()
         self.new_window = Main_UI()
         self.new_window.show()
+
 
 def check_clear(game_grid, game_buttons):
     for i in range(len(game_grid)):
