@@ -255,13 +255,13 @@ class Make_grid(QMainWindow, second_1_2_form_class):
         self.new_window = Make_UI()
         self.new_window.show()
 
-
 class Time_UI(QMainWindow, second_2_1_form_class):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
         self.backButton.clicked.connect(self.backFunction)
-        self.time_attack() # 생성자에서 time_attack 메서드 호출
+        self.FinderButton.clicked.connect(self.name_finder_dialog)
+        self.time_attack()  # 생성자에서 time_attack 메서드 호출
 
     def time_attack(self):
         file_count = count_puzzle_files()
@@ -270,16 +270,17 @@ class Time_UI(QMainWindow, second_2_1_form_class):
 
         # 버튼을 2개씩 생성하여 배치
         for i in range(file_count):
+            print(file_count)
             row = i // 2  # 행 계산 (나누기 2)
             col = (i % 2) * 2  # 열 계산 (0 또는 2)
-            
-            button1 = QPushButton(f"Puzzle{i+1}", self)
-            button1.clicked.connect(lambda _, x=2*i: self.puzzle_button_clicked(x))
+
+            button1 = QPushButton(f"Puzzle{i + 1}", self)
+            button1.clicked.connect(lambda _, x=2 * i: self.puzzle_button_clicked(x))
             layout.addWidget(button1, row, col)  # 첫 번째 버튼 추가
 
             # 다음 열에 두 번째 버튼 추가
-            button2 = QPushButton(f"Puzzle{i+1} Ranking", self)
-            button2.clicked.connect(lambda _, x=2*i + 1: self.puzzle_button_clicked(x))
+            button2 = QPushButton(f"Puzzle{i + 1} Ranking", self)
+            button2.clicked.connect(lambda _, x=2 * i + 1: self.puzzle_button_clicked(x))
             layout.addWidget(button2, row, col + 1)
 
         # 기존 레이아웃 제거 및 새로운 레이아웃 설정
@@ -287,6 +288,21 @@ class Time_UI(QMainWindow, second_2_1_form_class):
             QWidget().setLayout(self.scrollAreaWidgetContents.layout())
         self.scrollAreaWidgetContents.setLayout(layout)
 
+    def ranking_sort(self, rankdata) :
+        if rankdata:  # 빈 파일이 아닌 경우
+            # 이름과 시간 데이터를 저장할 리스트
+            time_data = []
+            for line in rankdata:
+                # JSON 데이터를 파싱하여 이름과 시간 추출
+                data = json.loads(line)
+                name = data.get("name", "Unknown")  # 이름이 존재시 이름을, 없을 시 Unknown 전달
+                real_time = data.get("real_time", 0)
+                time_data.append((name, real_time))
+
+            # 시간을 기준으로 정렬
+            sorted_ranking = sorted(time_data, key=lambda x: x[1])
+            return sorted_ranking
+        
     def puzzle_button_clicked(self, index):
         puzzle_files = index_puzzle_files()  # 퍼즐 파일 목록을 불러옵니다.
         puzzle_directory = os.path.join(path, "puzzle")
@@ -310,27 +326,15 @@ class Time_UI(QMainWindow, second_2_1_form_class):
             if os.path.exists(selected_time_path):
                 with open(selected_time_path, 'r') as file:
                     ranking_data = file.readlines()  # 파일의 각 줄을 리스트로 읽기
-                    if ranking_data:  # 빈 파일이 아닌 경우
-                        # 이름과 시간 데이터를 저장할 리스트
-                        time_data = []
-                        for line in ranking_data:
-                            # JSON 데이터를 파싱하여 이름과 시간 추출
-                            data = json.loads(line)
-                            name = data.get("name", "Unknown")  # 이름이 존재시 이름을, 없을 시 Unknown 전달
-                            real_time = data.get("real_time", 0)
-                            time_data.append((name, real_time))
+                    sorted_rank = self.ranking_sort(ranking_data)
+                    # 순위와 이름, 시간을 함께 출력
+                    ranking_str = ""
+                    rank = 1
+                    for name, time in sorted_rank:
+                        ranking_str += str(rank) + ". " + name + ": " + str(time) + " sec\n"
+                        rank += 1
 
-                        # 시간을 기준으로 정렬
-                        sorted_ranking = sorted(time_data, key=lambda x: x[1])
-                        print(sorted_ranking)
-                        # 순위와 이름, 시간을 함께 출력
-                        ranking_str = ""
-                        rank = 1
-                        for name, time in sorted_ranking:
-                            ranking_str += str(rank) + ". " + name + ": " + str(time) + " sec\n"
-                            rank += 1
-
-                        QMessageBox.information(self, f"{(index // 2) + 1} Ranking", ranking_str)
+                    QMessageBox.information(self, f"{(index // 2) + 1} Ranking", ranking_str)
             else:
                 QMessageBox.information(self, f"{(index // 2) + 1} Ranking", "No ranking data available.")
 
@@ -338,6 +342,37 @@ class Time_UI(QMainWindow, second_2_1_form_class):
         self.close()
         self.new_window = Main_UI()
         self.new_window.show()
+
+    def name_finder_dialog(self):
+        name, ok = QInputDialog.getText(self, "이름 검색", "이름을 입력하세요:")
+        if ok and name:
+            self.search_name(name)
+
+    def search_name(self, name):
+        time_files = index_time_files()
+        time_directory = os.path.join(path, "time")
+        matched_records = []
+
+        for time_file in time_files:
+            time_file_path = os.path.join(time_directory, time_file)
+            with open(time_file_path, 'r') as file:
+                lines = file.readlines()
+                for line in lines:
+                    data = json.loads(line)
+                    recorded_name = data.get("name", "Unknown")
+                    if string_matching(recorded_name, name) == 1:
+                        puzzle_name = time_file.replace('_time.txt', '')
+                        real_time = data.get("real_time", 0)
+                        matched_records.append((puzzle_name, real_time))
+
+        if matched_records:
+            matched_records.sort(key=lambda x: x[1])
+            result_str = ""
+            for rank, (puzzle, real_time) in enumerate(matched_records, start=1):
+                result_str += f"{rank}. Puzzle: {puzzle}, Time: {real_time} sec\n"
+            QMessageBox.information(self, "검색 결과", result_str)
+        else:
+            QMessageBox.information(self, "검색 결과", "해당 이름을 찾을 수 없습니다.")
 
 
 
@@ -892,6 +927,17 @@ def index_hint_files() :
     hint_txt_file.sort(key=lambda x: os.path.getmtime(os.path.join(hint_dir, x)), reverse=True)
 
     return hint_txt_file
+
+def string_matching(T, P):
+    n = len(T)
+    m = len(P)
+    for i in range(n - m + 1):
+        j = 0
+        while j < m and P[j] == T[i + j]:
+            j += 1
+        if j == m:
+            return 1
+    return -1
 
 
 if __name__ == "__main__":

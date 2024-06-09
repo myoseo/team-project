@@ -70,6 +70,19 @@
     </property>
    </widget>
   </widget>
+  <widget class="QPushButton" name="FinderButton">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>700</y>
+     <width>100</width>
+     <height>70</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>이름 검색</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>
