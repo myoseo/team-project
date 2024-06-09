@@ -270,7 +270,6 @@ class Time_UI(QMainWindow, second_2_1_form_class):
 
         # 버튼을 2개씩 생성하여 배치
         for i in range(file_count):
-            print(file_count)
             row = i // 2  # 행 계산 (나누기 2)
             col = (i % 2) * 2  # 열 계산 (0 또는 2)
 
@@ -355,8 +354,6 @@ class Time_UI(QMainWindow, second_2_1_form_class):
         matched_records = []
 
         for time_file in time_files:
-            print(f"time_file:{time_file}")
-            print(f"time_files:{time_files}")
             time_file_path = os.path.join(time_directory, time_file)
             with open(time_file_path, 'r') as file:
                 lines = file.readlines()
