@@ -349,7 +349,6 @@ class Time_UI(QMainWindow, second_2_1_form_class):
 
     def search_name(self, name):
         time_files = index_time_files()
-        print(time_files)
         time_directory = os.path.join(path, "time")
         matched_records = []
 
@@ -357,19 +356,23 @@ class Time_UI(QMainWindow, second_2_1_form_class):
             time_file_path = os.path.join(time_directory, time_file)
             with open(time_file_path, 'r') as file:
                 lines = file.readlines()
-                for line in lines:
-                    data = json.loads(line)
-                    recorded_name = data.get("name", "Unknown")
-                    if string_matching(recorded_name, name) == 1:
+                ranking_data = self.ranking_sort(lines)  # 각 퍼즐 파일에 대해 랭킹 정렬
+                rank = 1  # 랭킹을 1부터 시작
+                for data in ranking_data:
+                    recorded_name = data[0]
+                    if string_matching(recorded_name, name) == 1:  # 전체 문자열 일치 확인 (문자열 탐색 사용)
                         puzzle = time_files.index(time_file) + 1
-                        real_time = data.get("real_time", "ERROR")
-                        matched_records.append((puzzle, real_time))
+                        real_time = data[1]
+                        matched_records.append((puzzle, real_time, rank))  # 퍼즐 번호, 시간, 순위 저장
+                    rank += 1  # 랭킹 증가
 
         if matched_records:
             matched_records.sort(key=lambda x: x[1])
             result_str = ""
-            for rank, (puzzle, real_time) in enumerate(matched_records, start=1):
-                result_str += f"{rank}. Puzzle: {puzzle}, Time: {real_time} sec\n"
+            display_rank = 1  # 출력할 순위 초기화
+            for (puzzle, real_time, puzzle_rank) in matched_records:
+                result_str += f"{display_rank}. Puzzle: {puzzle}, Time: {real_time} sec, Rank: {puzzle_rank}\n"
+                display_rank += 1  # 출력할 순위 증가
             QMessageBox.information(self, "검색 결과", result_str)
         else:
             QMessageBox.information(self, "검색 결과", "해당 이름을 찾을 수 없습니다.")
