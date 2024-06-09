@@ -311,17 +311,25 @@ class Time_UI(QMainWindow, second_2_1_form_class):
                 with open(selected_time_path, 'r') as file:
                     ranking_data = file.readlines()  # 파일의 각 줄을 리스트로 읽기
                     if ranking_data:  # 빈 파일이 아닌 경우
-                        time = []
-                        for time_line in ranking_data:
-                            start_time = time_line.index(":") + 1
-                            end_time = time_line.index("}")
-                            time_value = float(time_line[start_time:end_time].strip())
-                            time.append(time_value)
-                        ranking_data = [(time.strip()) for time in ranking_data]
-                        # 리스트를 정렬
-                        sorted_ranking = sorted(time)
-                        # 순위와 시간을 함께 출력
-                        ranking_str = '\n'.join([f"{idx + 1}. {time} sec" for idx, time in enumerate(sorted_ranking)])
+                        # 이름과 시간 데이터를 저장할 리스트
+                        time_data = []
+                        for line in ranking_data:
+                            # JSON 데이터를 파싱하여 이름과 시간 추출
+                            data = json.loads(line)
+                            name = data.get("name", "Unknown")  # 이름이 존재시 이름을, 없을 시 Unknown 전달
+                            real_time = data.get("real_time", 0)
+                            time_data.append((name, real_time))
+
+                        # 시간을 기준으로 정렬
+                        sorted_ranking = sorted(time_data, key=lambda x: x[1])
+                        print(sorted_ranking)
+                        # 순위와 이름, 시간을 함께 출력
+                        ranking_str = ""
+                        rank = 1
+                        for name, time in sorted_ranking:
+                            ranking_str += str(rank) + ". " + name + ": " + str(time) + " sec\n"
+                            rank += 1
+
                         QMessageBox.information(self, f"{(index // 2) + 1} Ranking", ranking_str)
             else:
                 QMessageBox.information(self, f"{(index // 2) + 1} Ranking", "No ranking data available.")
@@ -330,6 +338,7 @@ class Time_UI(QMainWindow, second_2_1_form_class):
         self.close()
         self.new_window = Main_UI()
         self.new_window.show()
+
 
 
 class make_Time(QMainWindow, second_2_2_form_class):
@@ -419,8 +428,9 @@ class make_Time(QMainWindow, second_2_2_form_class):
             return
 
         if check_clear(self.game_grid, self.game_buttons):
-            self.time_save_file('time')
             QMessageBox.information(self, "Clear!", "정답입니다")
+            self.timer.stop()
+            self.show_name_input_dialog()
             self.close()
             self.new_window = Time_UI()
             self.new_window.show()
@@ -439,26 +449,38 @@ class make_Time(QMainWindow, second_2_2_form_class):
         self.new_window = Main_UI()
         self.new_window.show()
 
-    def time_save_file(self, index):
+    def show_name_input_dialog(self):
+        name, ok = QInputDialog.getText(self, "성공!", "이름을 입력하세요(미 입력시 Unknown으로 저장됩니다.):")
+        if ok:
+            if name == '' :
+                self.time_save_file(None)
+            else :
+                print(f"Input name: {name}")
+                # You can handle the entered name here, e.g., save it to a file or database
+                self.time_save_file(name)
+
+    def time_save_file(self, name):
         time_path = os.path.join(path, "time")
 
         # time 디렉토리가 없는 경우 생성, 디렉토리 파일이 이미 존재해도 오류 발생하지 않음
         if not os.path.exists(time_path):
             os.makedirs(time_path)
 
-        # index 사용하여 고유한 파일 이름 생성
-        # file_name, file_extension 분리 ex) a.json 파일에 index 1인 경우 a.1.json 저장
         file_name, file_extension = os.path.splitext(self.selected_puzzle_file)
-        indexed_file_name = f"{file_name}_{index}{file_extension}"
+        indexed_file_name = f"{file_name}_time{file_extension}"
         
         selected_time_path = os.path.join(time_path, indexed_file_name)
         #소수점 반올림
         r_time = round(self.set_timer - self.real_time, 2)
-        time_data = {"real_time": r_time}
+        if name == None :
+            time_data = {"real_time": r_time}
+        else :
+            time_data = {"name": name, "real_time": r_time}
 
         # 파일에 새로운 줄로 추가 (append)
         with open(selected_time_path, "a") as file:
             file.write(json.dumps(time_data) + "\n")
+
 
 
 class Stage_UI(QMainWindow, second_3_1_form_class):
