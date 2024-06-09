@@ -350,10 +350,13 @@ class Time_UI(QMainWindow, second_2_1_form_class):
 
     def search_name(self, name):
         time_files = index_time_files()
+        print(time_files)
         time_directory = os.path.join(path, "time")
         matched_records = []
 
         for time_file in time_files:
+            print(f"time_file:{time_file}")
+            print(f"time_files:{time_files}")
             time_file_path = os.path.join(time_directory, time_file)
             with open(time_file_path, 'r') as file:
                 lines = file.readlines()
@@ -361,9 +364,9 @@ class Time_UI(QMainWindow, second_2_1_form_class):
                     data = json.loads(line)
                     recorded_name = data.get("name", "Unknown")
                     if string_matching(recorded_name, name) == 1:
-                        puzzle_name = time_file.replace('_time.txt', '')
-                        real_time = data.get("real_time", 0)
-                        matched_records.append((puzzle_name, real_time))
+                        puzzle = time_files.index(time_file) + 1
+                        real_time = data.get("real_time", "ERROR")
+                        matched_records.append((puzzle, real_time))
 
         if matched_records:
             matched_records.sort(key=lambda x: x[1])
