@@ -52,9 +52,9 @@
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>450</x>
-     <y>4</y>
-     <width>200</width>
+     <x>9</x>
+     <y>30</y>
+     <width>1081</width>
      <height>41</height>
     </rect>
    </property>
@@ -67,7 +67,7 @@
     <string>스테이지</string>
    </property>
    <property name="alignment">
-    <set>Qt::AlignJustify|Qt::AlignVCenter</set>
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
  </widget>
