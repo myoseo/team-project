@@ -919,7 +919,7 @@ def index_puzzle_files() :
 
     puzzle_dir = os.path.join(path, "puzzle")
 
-    # 폴더에 있는 파일과 파일 목록을 가져옵니다.
+    # puzzle_dir 디렉토리에 있는 파일과 디렉토리 목록을 가져옵니다.
     puzzle_files = os.listdir(puzzle_dir)
 
     # 파일 목록(files) 중에서 확장자가 '.txt'인 파일들만 필터링하여 txt_file 리스트에 저장합니다.
@@ -935,19 +935,13 @@ def index_puzzle_files() :
 
 def index_time_files() :
 
-    # time 폴더에 있는 파일과 파일 목록을 가져옵니다.
     time_dir = os.path.join(path, "time")
 
-    # 파일 목록(files) 중에서 확장자가 '.txt'인 파일들만 필터링하여 txt_file 리스트에 저장합니다.
     time_files = os.listdir(time_dir)
 
-    # txt_file 리스트에 있는 파일들을 수정된 시간을 기준으로 내림차순으로 정렬합니다.
-    # 정렬 기준은 파일의 수정 시간(os.path.getmtime)을 사용합니다.
-    # reverse=True 옵션을 통해 내림차순으로 정렬합니다.
     time_txt_file = [f for f in time_files if f.endswith('.txt')]
     time_txt_file.sort(key=lambda x: os.path.getmtime(os.path.join(time_dir, x)), reverse=True)
 
-    # 정렬된 파일 리스트를 반환합니다.
     return time_txt_file
 
 def index_hint_files() :
