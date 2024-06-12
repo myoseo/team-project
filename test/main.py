@@ -255,13 +255,13 @@ class Make_grid(QMainWindow, second_1_2_form_class):
         self.new_window = Make_UI()
         self.new_window.show()
 
-
 class Time_UI(QMainWindow, second_2_1_form_class):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
         self.backButton.clicked.connect(self.backFunction)
-        self.time_attack() # 생성자에서 time_attack 메서드 호출
+        self.FinderButton.clicked.connect(self.name_finder_dialog)
+        self.time_attack()  # 생성자에서 time_attack 메서드 호출
 
     def time_attack(self):
         file_count = count_puzzle_files()
@@ -272,14 +272,14 @@ class Time_UI(QMainWindow, second_2_1_form_class):
         for i in range(file_count):
             row = i // 2  # 행 계산 (나누기 2)
             col = (i % 2) * 2  # 열 계산 (0 또는 2)
-            
-            button1 = QPushButton(f"Puzzle{i+1}", self)
-            button1.clicked.connect(lambda _, x=2*i: self.puzzle_button_clicked(x))
+
+            button1 = QPushButton(f"Puzzle{i + 1}", self)
+            button1.clicked.connect(lambda _, x=2 * i: self.puzzle_button_clicked(x))
             layout.addWidget(button1, row, col)  # 첫 번째 버튼 추가
 
             # 다음 열에 두 번째 버튼 추가
-            button2 = QPushButton(f"Puzzle{i+1} Ranking", self)
-            button2.clicked.connect(lambda _, x=2*i + 1: self.puzzle_button_clicked(x))
+            button2 = QPushButton(f"Puzzle{i + 1} Ranking", self)
+            button2.clicked.connect(lambda _, x=2 * i + 1: self.puzzle_button_clicked(x))
             layout.addWidget(button2, row, col + 1)
 
         # 기존 레이아웃 제거 및 새로운 레이아웃 설정
@@ -287,6 +287,21 @@ class Time_UI(QMainWindow, second_2_1_form_class):
             QWidget().setLayout(self.scrollAreaWidgetContents.layout())
         self.scrollAreaWidgetContents.setLayout(layout)
 
+    def ranking_sort(self, rankdata) :
+        if rankdata:  # 빈 파일이 아닌 경우
+            # 이름과 시간 데이터를 저장할 리스트
+            time_data = []
+            for line in rankdata:
+                # JSON 데이터를 파싱하여 이름과 시간 추출
+                data = json.loads(line)
+                name = data.get("name", "Unknown")  # 이름이 존재시 이름을, 없을 시 Unknown 전달
+                real_time = data.get("real_time", 0)
+                time_data.append((name, real_time))
+
+            # 시간을 기준으로 정렬
+            sorted_ranking = sorted(time_data, key=lambda x: x[1])
+            return sorted_ranking
+        
     def puzzle_button_clicked(self, index):
         puzzle_files = index_puzzle_files()  # 퍼즐 파일 목록을 불러옵니다.
         puzzle_directory = os.path.join(path, "puzzle")
@@ -310,27 +325,15 @@ class Time_UI(QMainWindow, second_2_1_form_class):
             if os.path.exists(selected_time_path):
                 with open(selected_time_path, 'r') as file:
                     ranking_data = file.readlines()  # 파일의 각 줄을 리스트로 읽기
-                    if ranking_data:  # 빈 파일이 아닌 경우
-                        # 이름과 시간 데이터를 저장할 리스트
-                        time_data = []
-                        for line in ranking_data:
-                            # JSON 데이터를 파싱하여 이름과 시간 추출
-                            data = json.loads(line)
-                            name = data.get("name", "Unknown")  # 이름이 존재시 이름을, 없을 시 Unknown 전달
-                            real_time = data.get("real_time", 0)
-                            time_data.append((name, real_time))
+                    sorted_rank = self.ranking_sort(ranking_data)
+                    # 순위와 이름, 시간을 함께 출력
+                    ranking_str = ""
+                    rank = 1
+                    for name, time in sorted_rank:
+                        ranking_str += str(rank) + ". " + name + ": " + str(time) + " sec\n"
+                        rank += 1
 
-                        # 시간을 기준으로 정렬
-                        sorted_ranking = sorted(time_data, key=lambda x: x[1])
-                        print(sorted_ranking)
-                        # 순위와 이름, 시간을 함께 출력
-                        ranking_str = ""
-                        rank = 1
-                        for name, time in sorted_ranking:
-                            ranking_str += str(rank) + ". " + name + ": " + str(time) + " sec\n"
-                            rank += 1
-
-                        QMessageBox.information(self, f"{(index // 2) + 1} Ranking", ranking_str)
+                    QMessageBox.information(self, f"{(index // 2) + 1} Ranking", ranking_str)
             else:
                 QMessageBox.information(self, f"{(index // 2) + 1} Ranking", "No ranking data available.")
 
@@ -338,6 +341,41 @@ class Time_UI(QMainWindow, second_2_1_form_class):
         self.close()
         self.new_window = Main_UI()
         self.new_window.show()
+
+    def name_finder_dialog(self):
+        name, ok = QInputDialog.getText(self, "이름 검색", "이름을 입력하세요:")
+        if ok and name:
+            self.search_name(name)
+
+    def search_name(self, name):
+        time_files = index_time_files()
+        time_directory = os.path.join(path, "time")
+        matched_records = []
+
+        for time_file in time_files:
+            time_file_path = os.path.join(time_directory, time_file)
+            with open(time_file_path, 'r') as file:
+                lines = file.readlines()
+                ranking_data = self.ranking_sort(lines)  # 각 퍼즐 파일에 대해 랭킹 정렬
+                rank = 1  # 랭킹을 1부터 시작
+                for data in ranking_data:
+                    recorded_name = data[0]
+                    if string_matching(recorded_name, name) == 1:  # 전체 문자열 일치 확인 (문자열 탐색 사용)
+                        puzzle = time_files.index(time_file) + 1
+                        real_time = data[1]
+                        matched_records.append((puzzle, real_time, rank))  # 퍼즐 번호, 시간, 순위 저장
+                    rank += 1  # 랭킹 증가
+
+        if matched_records:
+            matched_records.sort(key=lambda x: x[1])
+            result_str = ""
+            display_rank = 1  # 출력할 순위 초기화
+            for (puzzle, real_time, puzzle_rank) in matched_records:
+                result_str += f"{display_rank}. Puzzle: {puzzle}, Time: {real_time} sec, Rank: {puzzle_rank}\n"
+                display_rank += 1  # 출력할 순위 증가
+            QMessageBox.information(self, "검색 결과", result_str)
+        else:
+            QMessageBox.information(self, "검색 결과", "해당 이름을 찾을 수 없습니다.")
 
 
 
@@ -674,7 +712,6 @@ class Ai_UI(QMainWindow, second_4_1_form_class):
         self.new_window = Main_UI()
         self.new_window.show()
 
-
 class ai_stage(QMainWindow, second_4_2_form_class):
     def __init__(self, selected_puzzle_path):
         super().__init__()
@@ -683,78 +720,71 @@ class ai_stage(QMainWindow, second_4_2_form_class):
         self.load_puzzle(selected_puzzle_path)
 
     def load_puzzle(self, selected_puzzle_path):
-        with open(selected_puzzle_path, 'r') as file:
-            self.current_puzzle = json.load(file)
-        self.game_grid = self.current_puzzle['grid']  # 퍼즐 그리드
+        try:
+            with open(selected_puzzle_path, 'r') as file:
+                self.current_puzzle = json.load(file)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            QMessageBox.critical(self, "Error", f"Failed to load puzzle: {e}")
+            self.close()
+            return
+        
+        self.game_grid = self.current_puzzle['grid']
         size = len(self.game_grid)
+        self.user_interactions = [[False] * size for _ in range(size)]  # Track user interactions
         self.game_buttons = []
 
-        for i in reversed(range(self.logic_pan.count())):  # 퍼즐 그리드 초기화
+        for i in reversed(range(self.logic_pan.count())):
             widget = self.logic_pan.itemAt(i).widget()
             if widget:
                 widget.setParent(None)
-                
+
         self.display_hints(size)
         self.create_puzzle_grid(size)
         self.search_graph(size)
 
     def display_hints(self, size):
-        hints = self.generate_hint()  # DFS 방식으로 힌트 생성
-        row_hints = hints["rows"]
-        col_hints = hints["columns"]
+        hints = self.generate_hints()
+        self.row_hints = hints["rows"]
+        self.col_hints = hints["columns"]
 
         for i in range(size):
-            hint_label = QLabel(' '.join(map(str, row_hints[i])))
+            hint_label = QLabel(' '.join(map(str, self.row_hints[i])))
             self.logic_pan.addWidget(hint_label, i + 1, 0)
 
         for j in range(size):
-            hint_label = QLabel(' '.join(map(str, col_hints[j])))
+            hint_label = QLabel(' '.join(map(str, self.col_hints[j])))
             self.logic_pan.addWidget(hint_label, 0, j + 1)
 
-    def generate_hint(self):
-        # 힌트를 생성하는 함수
+    def generate_hints(self):
         hints = {"rows": [], "columns": []}
         size = len(self.game_grid)
 
-        # DFS를 이용하여 힌트 계산
-        def dfs(x, y, visited, direction):
-            if not (0 <= x < size and 0 <= y < size):  # 그리드 범위를 벗어난 경우
-                return 0
-            if visited[x][y] or self.game_grid[x][y] == 0:  # 이미 방문했거나 값이 0인 경우
-                return 0
-            visited[x][y] = True  # 방문 표시
-            length = 1  # 길이 초기화
-            for dx, dy in direction:  # 주어진 방향으로 이동
-                nx, ny = x + dx, y + dy
-                length += dfs(nx, ny, visited, direction)  # 재귀 호출
-            return length
-
-        # 행 힌트 계산
         for i in range(size):
-            row_hint = []
-            visited = [[False] * size for _ in range(size)]  # 방문 배열 초기화
-            for j in range(size):
-                if self.game_grid[i][j] == 1 and not visited[i][j]:  # 방문하지 않은 1인 경우
-                    len_R = dfs(i, j, visited, [(0, 1), (0, -1)])  # DFS 호출
-                    if len_R > 0:
-                        row_hint.append(len_R)
-            hints["rows"].append(row_hint if row_hint else [0])  # 힌트 추가
+            hints["rows"].append(self.get_line_hint(self.game_grid[i]))
 
-        # 열 힌트 계산
         for j in range(size):
-            col_hint = []
-            visited = [[False] * size for _ in range(size)]  # 방문 배열 초기화
-            for i in range(size):
-                if self.game_grid[i][j] == 1 and not visited[i][j]:  # 방문하지 않은 1인 경우
-                    len_C = dfs(i, j, visited, [(1, 0), (-1, 0)])  # DFS 호출
-                    if len_C > 0:
-                        col_hint.append(len_C)
-            hints["columns"].append(col_hint if col_hint else [0])  # 힌트 추가
+            column = [self.game_grid[i][j] for i in range(size)]
+            hints["columns"].append(self.get_line_hint(column))
 
         return hints
 
+    def get_line_hint(self, line):
+        hint = []
+        count = 0
+        for cell in line:
+            if cell == 1:
+                count += 1
+            elif count > 0:
+                hint.append(count)
+                count = 0
+        if count > 0:
+            hint.append(count)
+        return hint if hint else [0]
+
     def create_puzzle_grid(self, size):
-        self.game_buttons = []  # 게임 버튼 초기화
+        self.game_buttons = []
+        button_size = min(600 // size, 600 // size)
+
         for i in range(size):
             row_buttons = []
             for j in range(size):
@@ -762,7 +792,6 @@ class ai_stage(QMainWindow, second_4_2_form_class):
                 button.setCheckable(True)
                 button.setStyleSheet('background-color: white')
                 button.clicked.connect(self.create_button_handler(i, j))
-                button_size = min(600 // size, 600 // size)  # 퍼즐 크기에 따라 버튼 크기 조정
                 button.setFixedSize(button_size, button_size)
                 self.logic_pan.addWidget(button, i + 1, j + 1)
                 row_buttons.append(button)
@@ -770,14 +799,27 @@ class ai_stage(QMainWindow, second_4_2_form_class):
 
     def create_button_handler(self, x, y):
         def handler():
+            self.user_interactions[x][y] = True  # Mark the cell as interacted by the user
             self.check(x, y)
         return handler
+
+    def check(self, x, y):
+        button = self.game_buttons[x][y]
+        if button.isChecked():
+            button.setStyleSheet('background-color: black')
+        else:
+            button.setStyleSheet('background-color: white')
+
+        if self.check_clear() and self.all_interacted():
+            QMessageBox.information(self, "Clear!", "퍼즐이 완료되었습니다.")
+            self.close()
+            self.new_window = Ai_UI()
+            self.new_window.show()
 
     def search_graph(self, size):
         colored_queue = deque()
         uncolored_queue = deque()
-        
-        # 초기 상태에서 큐에 색칠된 부분과 색칠되지 않은 부분 추가
+
         for i in range(size):
             for j in range(size):
                 if self.game_grid[i][j] == 1:
@@ -785,25 +827,25 @@ class ai_stage(QMainWindow, second_4_2_form_class):
                 else:
                     uncolored_queue.append((i, j))
 
-        # BFS로 퍼즐 해결
         while colored_queue or uncolored_queue:
-            while colored_queue:
-                x, y = colored_queue.popleft()
-                self.process_node(x, y, True, uncolored_queue)
+            self.process_queue(colored_queue, True, uncolored_queue)
+            self.process_queue(uncolored_queue, False, colored_queue)
 
-            while uncolored_queue:
-                x, y = uncolored_queue.popleft()
-                self.process_node(x, y, False, colored_queue)
-
-        if self.check_clear():
+        if self.check_clear() and self.all_interacted():
             QMessageBox.information(self, "Clear!", "자동풀이 완료")
             self.close()
             self.new_window = Ai_UI()
             self.new_window.show()
 
+    def process_queue(self, queue, is_colored, opposite_queue):
+        while queue:
+            x, y = queue.popleft()
+            self.process_node(x, y, is_colored, opposite_queue)
+
     def process_node(self, x, y, is_colored, queue):
-        if x < 0 or x >= len(self.game_grid) or y < 0 or y >= len(self.game_grid):
-            return  # 범위를 벗어나는 경우
+        size = len(self.game_grid)
+        if not (0 <= x < size and 0 <= y < size):
+            return
 
         if is_colored and self.game_grid[x][y] == 1:
             self.game_buttons[x][y].setStyleSheet('background-color: black')
@@ -816,25 +858,45 @@ class ai_stage(QMainWindow, second_4_2_form_class):
                 queue.append((nx, ny))
 
     def get_neighbors(self, x, y):
-        # 인접한 칸들을 반환
         size = len(self.game_grid)
         neighbors = []
         if x > 0:
-            neighbors.append((x-1, y))
-        if x < size-1:
-            neighbors.append((x+1, y))
+            neighbors.append((x - 1, y))
+        if x < size - 1:
+            neighbors.append((x + 1, y))
         if y > 0:
-            neighbors.append((x, y-1))
-        if y < size-1:
-            neighbors.append((x, y+1))
+            neighbors.append((x, y - 1))
+        if y < size - 1:
+            neighbors.append((x, y + 1))
         return neighbors
 
+    def check_clear(self):
+        return all(self.check_row(i) for i in range(len(self.game_grid))) and \
+               all(self.check_column(j) for j in range(len(self.game_grid[0])))
 
+    def check_row(self, row):
+        expected = self.row_hints[row]
+        actual = self.get_line_hint([button.styleSheet() == 'background-color: black' for button in self.game_buttons[row]])
+        return actual == expected
+
+    def check_column(self, col):
+        expected = self.col_hints[col]
+        actual = self.get_line_hint([self.game_buttons[i][col].styleSheet() == 'background-color: black' for i in range(len(self.game_grid))])
+        return actual == expected
+
+    def all_interacted(self):
+        for i in range(len(self.user_interactions)):
+            for j in range(len(self.user_interactions[i])):
+                if self.game_grid[i][j] == 1 and not self.user_interactions[i][j]:
+                    return False
+        return True
 
     def backFunction(self):
         self.close()
         self.new_window = Main_UI()
         self.new_window.show()
+
+
 
 def check_clear(game_grid, game_buttons):
     for i in range(len(game_grid)):
@@ -892,6 +954,17 @@ def index_hint_files() :
     hint_txt_file.sort(key=lambda x: os.path.getmtime(os.path.join(hint_dir, x)), reverse=True)
 
     return hint_txt_file
+
+def string_matching(T, P):
+    n = len(T)
+    m = len(P)
+    for i in range(n - m + 1):
+        j = 0
+        while j < m and P[j] == T[i + j]:
+            j += 1
+        if j == m:
+            return 1
+    return -1
 
 
 if __name__ == "__main__":

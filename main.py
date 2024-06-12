@@ -712,6 +712,7 @@ class Ai_UI(QMainWindow, second_4_1_form_class):
         self.new_window = Main_UI()
         self.new_window.show()
 
+
 class ai_stage(QMainWindow, second_4_2_form_class):
     def __init__(self, selected_puzzle_path):
         super().__init__()
@@ -720,71 +721,78 @@ class ai_stage(QMainWindow, second_4_2_form_class):
         self.load_puzzle(selected_puzzle_path)
 
     def load_puzzle(self, selected_puzzle_path):
-        try:
-            with open(selected_puzzle_path, 'r') as file:
-                self.current_puzzle = json.load(file)
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            QMessageBox.critical(self, "Error", f"Failed to load puzzle: {e}")
-            self.close()
-            return
-        
-        self.game_grid = self.current_puzzle['grid']
+        with open(selected_puzzle_path, 'r') as file:
+            self.current_puzzle = json.load(file)
+        self.game_grid = self.current_puzzle['grid']  # 퍼즐 그리드
         size = len(self.game_grid)
-        self.user_interactions = [[False] * size for _ in range(size)]  # Track user interactions
         self.game_buttons = []
 
-        for i in reversed(range(self.logic_pan.count())):
+        for i in reversed(range(self.logic_pan.count())):  # 퍼즐 그리드 초기화
             widget = self.logic_pan.itemAt(i).widget()
             if widget:
                 widget.setParent(None)
-
+                
         self.display_hints(size)
         self.create_puzzle_grid(size)
         self.search_graph(size)
 
     def display_hints(self, size):
-        hints = self.generate_hints()
-        self.row_hints = hints["rows"]
-        self.col_hints = hints["columns"]
+        hints = self.generate_hint()  # DFS 방식으로 힌트 생성
+        row_hints = hints["rows"]
+        col_hints = hints["columns"]
 
         for i in range(size):
-            hint_label = QLabel(' '.join(map(str, self.row_hints[i])))
+            hint_label = QLabel(' '.join(map(str, row_hints[i])))
             self.logic_pan.addWidget(hint_label, i + 1, 0)
 
         for j in range(size):
-            hint_label = QLabel(' '.join(map(str, self.col_hints[j])))
+            hint_label = QLabel(' '.join(map(str, col_hints[j])))
             self.logic_pan.addWidget(hint_label, 0, j + 1)
 
-    def generate_hints(self):
+    def generate_hint(self):
+        # 힌트를 생성하는 함수
         hints = {"rows": [], "columns": []}
         size = len(self.game_grid)
 
-        for i in range(size):
-            hints["rows"].append(self.get_line_hint(self.game_grid[i]))
+        # DFS를 이용하여 힌트 계산
+        def dfs(x, y, visited, direction):
+            if not (0 <= x < size and 0 <= y < size):  # 그리드 범위를 벗어난 경우
+                return 0
+            if visited[x][y] or self.game_grid[x][y] == 0:  # 이미 방문했거나 값이 0인 경우
+                return 0
+            visited[x][y] = True  # 방문 표시
+            length = 1  # 길이 초기화
+            for dx, dy in direction:  # 주어진 방향으로 이동
+                nx, ny = x + dx, y + dy
+                length += dfs(nx, ny, visited, direction)  # 재귀 호출
+            return length
 
+        # 행 힌트 계산
+        for i in range(size):
+            row_hint = []
+            visited = [[False] * size for _ in range(size)]  # 방문 배열 초기화
+            for j in range(size):
+                if self.game_grid[i][j] == 1 and not visited[i][j]:  # 방문하지 않은 1인 경우
+                    len_R = dfs(i, j, visited, [(0, 1), (0, -1)])  # DFS 호출
+                    if len_R > 0:
+                        row_hint.append(len_R)
+            hints["rows"].append(row_hint if row_hint else [0])  # 힌트 추가
+
+        # 열 힌트 계산
         for j in range(size):
-            column = [self.game_grid[i][j] for i in range(size)]
-            hints["columns"].append(self.get_line_hint(column))
+            col_hint = []
+            visited = [[False] * size for _ in range(size)]  # 방문 배열 초기화
+            for i in range(size):
+                if self.game_grid[i][j] == 1 and not visited[i][j]:  # 방문하지 않은 1인 경우
+                    len_C = dfs(i, j, visited, [(1, 0), (-1, 0)])  # DFS 호출
+                    if len_C > 0:
+                        col_hint.append(len_C)
+            hints["columns"].append(col_hint if col_hint else [0])  # 힌트 추가
 
         return hints
 
-    def get_line_hint(self, line):
-        hint = []
-        count = 0
-        for cell in line:
-            if cell == 1:
-                count += 1
-            elif count > 0:
-                hint.append(count)
-                count = 0
-        if count > 0:
-            hint.append(count)
-        return hint if hint else [0]
-
     def create_puzzle_grid(self, size):
-        self.game_buttons = []
-        button_size = min(600 // size, 600 // size)
-
+        self.game_buttons = []  # 게임 버튼 초기화
         for i in range(size):
             row_buttons = []
             for j in range(size):
@@ -792,6 +800,7 @@ class ai_stage(QMainWindow, second_4_2_form_class):
                 button.setCheckable(True)
                 button.setStyleSheet('background-color: white')
                 button.clicked.connect(self.create_button_handler(i, j))
+                button_size = min(600 // size, 600 // size)  # 퍼즐 크기에 따라 버튼 크기 조정
                 button.setFixedSize(button_size, button_size)
                 self.logic_pan.addWidget(button, i + 1, j + 1)
                 row_buttons.append(button)
@@ -799,27 +808,14 @@ class ai_stage(QMainWindow, second_4_2_form_class):
 
     def create_button_handler(self, x, y):
         def handler():
-            self.user_interactions[x][y] = True  # Mark the cell as interacted by the user
             self.check(x, y)
         return handler
-
-    def check(self, x, y):
-        button = self.game_buttons[x][y]
-        if button.isChecked():
-            button.setStyleSheet('background-color: black')
-        else:
-            button.setStyleSheet('background-color: white')
-
-        if self.check_clear() and self.all_interacted():
-            QMessageBox.information(self, "Clear!", "퍼즐이 완료되었습니다.")
-            self.close()
-            self.new_window = Ai_UI()
-            self.new_window.show()
 
     def search_graph(self, size):
         colored_queue = deque()
         uncolored_queue = deque()
-
+        
+        # 초기 상태에서 큐에 색칠된 부분과 색칠되지 않은 부분 추가
         for i in range(size):
             for j in range(size):
                 if self.game_grid[i][j] == 1:
@@ -827,25 +823,25 @@ class ai_stage(QMainWindow, second_4_2_form_class):
                 else:
                     uncolored_queue.append((i, j))
 
+        # BFS로 퍼즐 해결
         while colored_queue or uncolored_queue:
-            self.process_queue(colored_queue, True, uncolored_queue)
-            self.process_queue(uncolored_queue, False, colored_queue)
+            while colored_queue:
+                x, y = colored_queue.popleft()
+                self.process_node(x, y, True, uncolored_queue)
 
-        if self.check_clear() and self.all_interacted():
+            while uncolored_queue:
+                x, y = uncolored_queue.popleft()
+                self.process_node(x, y, False, colored_queue)
+
+        if self.check_clear():
             QMessageBox.information(self, "Clear!", "자동풀이 완료")
             self.close()
             self.new_window = Ai_UI()
             self.new_window.show()
 
-    def process_queue(self, queue, is_colored, opposite_queue):
-        while queue:
-            x, y = queue.popleft()
-            self.process_node(x, y, is_colored, opposite_queue)
-
     def process_node(self, x, y, is_colored, queue):
-        size = len(self.game_grid)
-        if not (0 <= x < size and 0 <= y < size):
-            return
+        if x < 0 or x >= len(self.game_grid) or y < 0 or y >= len(self.game_grid):
+            return  # 범위를 벗어나는 경우
 
         if is_colored and self.game_grid[x][y] == 1:
             self.game_buttons[x][y].setStyleSheet('background-color: black')
@@ -858,45 +854,25 @@ class ai_stage(QMainWindow, second_4_2_form_class):
                 queue.append((nx, ny))
 
     def get_neighbors(self, x, y):
+        # 인접한 칸들을 반환
         size = len(self.game_grid)
         neighbors = []
         if x > 0:
-            neighbors.append((x - 1, y))
-        if x < size - 1:
-            neighbors.append((x + 1, y))
+            neighbors.append((x-1, y))
+        if x < size-1:
+            neighbors.append((x+1, y))
         if y > 0:
-            neighbors.append((x, y - 1))
-        if y < size - 1:
-            neighbors.append((x, y + 1))
+            neighbors.append((x, y-1))
+        if y < size-1:
+            neighbors.append((x, y+1))
         return neighbors
 
-    def check_clear(self):
-        return all(self.check_row(i) for i in range(len(self.game_grid))) and \
-               all(self.check_column(j) for j in range(len(self.game_grid[0])))
 
-    def check_row(self, row):
-        expected = self.row_hints[row]
-        actual = self.get_line_hint([button.styleSheet() == 'background-color: black' for button in self.game_buttons[row]])
-        return actual == expected
-
-    def check_column(self, col):
-        expected = self.col_hints[col]
-        actual = self.get_line_hint([self.game_buttons[i][col].styleSheet() == 'background-color: black' for i in range(len(self.game_grid))])
-        return actual == expected
-
-    def all_interacted(self):
-        for i in range(len(self.user_interactions)):
-            for j in range(len(self.user_interactions[i])):
-                if self.game_grid[i][j] == 1 and not self.user_interactions[i][j]:
-                    return False
-        return True
 
     def backFunction(self):
         self.close()
         self.new_window = Main_UI()
         self.new_window.show()
-
-
 
 def check_clear(game_grid, game_buttons):
     for i in range(len(game_grid)):
